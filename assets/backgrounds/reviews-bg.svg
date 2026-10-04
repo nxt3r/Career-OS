@@ -1,0 +1,20 @@
+<svg width="1200" height="800" viewBox="0 0 1200 800" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <radialGradient id="fade" cx="50%" cy="50%" r="75%">
+      <stop offset="0%" stop-color="#6366F1" stop-opacity="0.14"/>
+      <stop offset="100%" stop-color="#6366F1" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect width="1200" height="800" fill="url(#fade)"/>
+  <g stroke="#6366F1" stroke-width="1" fill="none" opacity="0.22">
+    <polyline points="80,500 200,460 320,510 440,400 560,440 680,330 800,370 920,260 1040,300 1160,220"/>
+  </g>
+  <g stroke="#6366F1" stroke-width="1" fill="none" opacity="0.12">
+    <polyline points="80,600 200,590 320,610 440,570 560,590 680,550 800,570 920,520 1040,540 1160,500"/>
+  </g>
+  <g fill="#6366F1" opacity="0.3">
+    <circle cx="440" cy="400" r="4"/>
+    <circle cx="800" cy="370" r="4"/>
+    <circle cx="1160" cy="220" r="4"/>
+  </g>
+</svg>

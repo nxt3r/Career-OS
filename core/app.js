@@ -2,6 +2,7 @@ import { createSidebar } from "../components/sidebar.js";
 import { loadRoute } from "./router.js";
 import { initKeyboard } from "./keyboard.js";
 import { onAuthChange, isPasswordAccount } from "./auth.js";
+import "./passwordToggle.js";
 import { renderAuthScreen, renderVerifyScreen } from "../modules/auth/auth.js";
 import { renderUsernameScreen } from "../modules/auth/username.js";
 import { getUserProfile } from "./username.js";

@@ -1,0 +1,172 @@
+.project-card{
+  background:var(--surface);
+  border-radius:var(--radius);
+  margin-bottom:18px;
+  overflow:hidden;
+}
+
+.project-header{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  padding:20px;
+  cursor:pointer;
+}
+
+.project-header:hover{
+  background:color-mix(in srgb, var(--surface) 85%, var(--accent) 15%);
+}
+
+.project-body{
+  border-top:1px solid var(--surface-2);
+  padding:20px;
+  animation:fadeIn 0.2s ease;
+}
+
+.project-right{
+  display:flex;
+  align-items:center;
+  gap:12px;
+}
+
+.project-mini-progress{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  margin-top:8px;
+}
+
+.project-mini-progress-bar{
+  width:120px;
+  height:6px;
+  background:var(--surface-2);
+  border-radius:999px;
+  overflow:hidden;
+}
+
+.project-mini-progress-fill{
+  height:100%;
+  background:var(--accent);
+  border-radius:999px;
+  transition:width 0.3s ease;
+}
+
+.project-mini-progress small{
+  font-size:11px;
+}
+
+.project-tabs{
+  display:flex;
+  gap:10px;
+  margin:18px 0;
+}
+
+.project-filters{
+  display:flex;
+  flex-wrap:wrap;
+  gap:8px;
+  margin-bottom:16px;
+}
+
+.project-filter{
+  width:auto;
+  padding:8px 14px;
+  background:var(--surface-2);
+  color:white;
+  transition:transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.project-filter:hover{
+  transform:translateY(-2px);
+  box-shadow:0 4px 12px rgba(0,0,0,0.25);
+}
+
+.project-filter.active{
+  background:var(--accent);
+}
+
+.project-empty{
+  opacity:.6;
+  padding:12px 0;
+}
+
+.archived-project{
+  opacity:.7;
+}
+
+.archived-label{
+  font-size:.75rem;
+  opacity:.7;
+}
+
+.project-status-control{
+  margin:12px 0;
+}
+
+.project-status-control label{
+  display:block;
+  margin-bottom:4px;
+  font-size:.85rem;
+  opacity:.75;
+}
+
+.archive-project{
+  background:#7f1d1d;
+}
+
+.project-tab-panel{
+  background:var(--surface-3);
+  border-radius:var(--radius-sm);
+  padding:14px;
+  margin-top:10px;
+}
+
+.project-inbox .capture{
+  background:var(--surface);
+  border-radius:var(--radius-sm);
+  padding:10px;
+  margin-bottom:8px;
+}
+
+.project-overview-stats{
+  margin:10px 0;
+}
+
+.project-skills{
+  margin-top:14px;
+}
+
+#addProjectBtn{
+  background:var(--accent);
+}
+
+.add-milestone{
+  background:var(--accent) !important;
+}
+
+.status-select.status-active{
+  background:#14532D;
+  color:#BBF7D0;
+}
+
+.status-select.status-planning{
+  background:#3F3F46;
+  color:#E4E4E7;
+}
+
+.status-select.status-paused{
+  background:#78350F;
+  color:#FDE68A;
+}
+
+.status-select.status-completed{
+  background:#1E3A8A;
+  color:#BFDBFE;
+}
+
+body[data-module="projects"] .ambient-background{
+  background-image: url("../assets/backgrounds/projects-bg.svg");
+  background-size: cover;
+  background-position: center;
+  opacity: 0.6;
+}

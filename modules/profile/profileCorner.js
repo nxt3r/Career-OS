@@ -2,17 +2,54 @@ import { auth } from "../../core/firebase.js";
 import { logOutUser } from "../../core/auth.js";
 import { getUserProfile } from "../../core/username.js";
 import { getAvatarDisplay } from "./avatars.js";
-import { renderAccountPanel } from "./accountPanel.js";
+import { goTo } from "../../core/router.js";
 
 let menuOpen = false;
 
 
 let outsideClickBound = false;
+let scrollListenerBound = false;
+let lastScrollY = 0;
+let scrollHideTimeout = null;
 
 
 export async function renderProfileCorner(container, user) {
 
   if (!container) return;
+
+  if (!scrollListenerBound) {
+
+    scrollListenerBound = true;
+
+    lastScrollY = window.scrollY;
+
+    window.addEventListener("scroll", () => {
+
+      const corner =
+        document.getElementById("profileCorner");
+
+      if (!corner) return;
+
+      const currentScrollY = window.scrollY;
+
+      const scrollingDown =
+        currentScrollY > lastScrollY && currentScrollY > 40;
+
+      corner.classList.toggle("profile-corner-hidden", scrollingDown);
+
+      lastScrollY = currentScrollY;
+
+      if (scrollHideTimeout) clearTimeout(scrollHideTimeout);
+
+      scrollHideTimeout = setTimeout(() => {
+
+        corner.classList.remove("profile-corner-hidden");
+
+      }, 1200);
+
+    }, { passive: true });
+
+  }
 
   if (!outsideClickBound) {
 
@@ -106,11 +143,7 @@ export async function renderProfileCorner(container, user) {
 
         renderProfileCorner(container, user);
 
-        renderAccountPanel(
-          document.getElementById("app"),
-          user,
-          profile
-        );
+        goTo("account");
 
       });
 

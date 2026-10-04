@@ -5,6 +5,8 @@ import {
   totalHours
 } from "../../core/utils.js";
 import { saveData } from "../../core/storage.js";
+import { renderLinkChip, attachLinkChipEvents } from "../../core/linkChip.js";
+import { openModal, closeModal } from "../../core/modal.js";
 import {
   getTodayDistractionHours,
   getActiveProjects,
@@ -15,7 +17,7 @@ import {
 
 export function renderDashboard(app) {
 
-  const week = getWeekSessions(state.sessions);
+  const week = getWeekSessions(state.sessions, state);
 
   const deep = hoursByCategory(week, "Deep Work");
   const weeklyTracked = totalHours(week);
@@ -32,6 +34,21 @@ const distractionPercent = Math.min(
   (weeklyDistraction / distractionLimit) * 100,
   100
 );
+
+const rawDistractionPercent =
+  (weeklyDistraction / distractionLimit) * 100;
+
+const distractionGlowClass =
+  rawDistractionPercent >= 100
+    ? "glow-danger-max"
+    : rawDistractionPercent >= 90
+      ? "glow-danger-high"
+      : rawDistractionPercent >= 80
+        ? "glow-danger-low"
+        : "";
+
+const showDangerIcon =
+  rawDistractionPercent >= 100;
 
   const projectMap = {};
 
@@ -73,6 +90,16 @@ const weeklyPercent =
     100
   );
 
+const rawWeeklyPercent =
+  (weeklyDeep/weeklyGoal)*100;
+
+const focusGlowClass =
+  rawWeeklyPercent >= 100
+    ? "glow-success"
+    : rawWeeklyPercent >= 80
+      ? "glow-approaching-success"
+      : "";
+
 const neutralTime =
   formatHours(getTotalNeutralHours());
 
@@ -91,7 +118,7 @@ const tracked = formatHours(weeklyTracked);
 
   <!-- HERO CARD -->
 
-  <div class="card hero-card">
+  <div class="card hero-card ${focusGlowClass}">
 
         <p class="hero-label">
       WEEKLY FOCUS TIME
@@ -119,8 +146,8 @@ const tracked = formatHours(weeklyTracked);
 
   <div class="grid">
 
-    <div class="card stat-card">
-      <p>Distraction Time</p>
+    <div class="card stat-card ${distractionGlowClass}">
+      <p>Distraction Time ${showDangerIcon ? '<span class="danger-icon">⚠️</span>' : ""}</p>
       <h2>${distraction}</h2>
     </div>
 
@@ -154,10 +181,10 @@ const tracked = formatHours(weeklyTracked);
 
       ${
         projects.length === 0
-          ? "<p>No project sessions yet.</p>"
+          ? `<div class="empty-state"><span class="empty-state-icon">⏱️</span><p>No project sessions yet.</p></div>`
           : projects.map(project => `
               <p>
-                <strong>${project.name}</strong><br>
+                ${renderLinkChip("project", project.id, project.name)}<br>
                 ${(project.time / 3600000).toFixed(1)}h
               </p>
             `).join("")
@@ -223,6 +250,8 @@ const tracked = formatHours(weeklyTracked);
 
     });
 
+  attachLinkChipEvents(app);
+
 }
 
 function saveCapture() {
@@ -271,41 +300,123 @@ function renderCaptures() {
   if (state.captures.length === 0) {
 
     list.innerHTML =
-      "<p>Inbox is empty.</p>";
+      `<p class="inbox-empty">Inbox is empty.</p>`;
 
     return;
 
   }
 
-  list.innerHTML = state.captures
-    .slice(0, 5)
-    .map(capture => {
+  list.innerHTML =
+    state.captures
+      .slice(0, 5)
+      .map(capture => renderCaptureRow(capture))
+      .join("") +
+    (
+      state.captures.length > 5
+        ? `<button id="viewAllCapturesBtn" class="inbox-view-all">View all ${state.captures.length} →</button>`
+        : ""
+    );
 
-      const project =
-        state.projects.find(
-          p => p.id === capture.projectId
-        );
+  attachLinkChipEvents(list);
 
-      return `
-        <div class="capture">
+  const viewAllBtn =
+    document.getElementById("viewAllCapturesBtn");
 
-          <strong>
-            ${escapeHTML(capture.text)}
-          </strong>
+  if (viewAllBtn) {
 
-          <small>
-            ${
-              project
-                ? project.name
-                : "No project"
-            }
-          </small>
+    viewAllBtn.addEventListener("click", showAllCapturesModal);
 
-        </div>
-      `;
+  }
 
-    })
-    .join("");
+}
+
+
+function renderCaptureRow(capture) {
+
+  const project =
+    state.projects.find(
+      p => p.id === capture.projectId
+    );
+
+  return `
+    <div class="capture">
+
+      <strong>
+        ${escapeHTML(capture.text)}
+      </strong>
+
+      <small>
+        ${
+          project
+            ? renderLinkChip("project", project.id, project.name)
+            : "No project"
+        }
+      </small>
+
+    </div>
+  `;
+
+}
+
+
+function showAllCapturesModal() {
+
+  const sorted =
+    [...state.captures].sort(
+      (a, b) => b.createdAt - a.createdAt
+    );
+
+  const rows =
+    sorted
+      .map(capture => {
+
+        const project =
+          state.projects.find(
+            p => p.id === capture.projectId
+          );
+
+        return `
+          <div class="capture">
+
+            <strong>
+              ${escapeHTML(capture.text)}
+            </strong>
+
+            <small>
+              ${
+                project
+                  ? renderLinkChip("project", project.id, project.name)
+                  : "No project"
+              }
+              ·
+              ${new Date(capture.createdAt).toLocaleString()}
+            </small>
+
+          </div>
+        `;
+
+      })
+      .join("");
+
+  openModal(`
+
+    <h3>All Captures</h3>
+
+    <div class="modal-capture-list">
+      ${rows}
+    </div>
+
+    <div class="modal-actions">
+      <button class="modal-cancel" id="closeAllCaptures">Close</button>
+    </div>
+
+  `);
+
+  attachLinkChipEvents(document.getElementById("modalOverlay"));
+
+  document
+    .getElementById("closeAllCaptures")
+    .addEventListener("click", closeModal);
 
 }
 

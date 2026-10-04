@@ -1,0 +1,129 @@
+.career-controls{
+  margin-bottom:16px;
+}
+
+.career-goal-card{
+  margin-bottom:14px;
+}
+
+.career-goal-header{
+  display:flex;
+  justify-content:space-between;
+  align-items:flex-start;
+  cursor:pointer;
+  margin:-20px -20px 0;
+  padding:20px;
+  transition:background 0.15s ease;
+  border-radius:var(--radius) var(--radius) 0 0;
+}
+
+.career-goal-header-collapsed{
+  margin-bottom:-20px;
+  padding-bottom:20px;
+  border-radius:var(--radius);
+}
+
+.career-goal-header:hover{
+  background:color-mix(in srgb, var(--surface) 85%, var(--accent) 15%);
+}
+
+.career-goal-header h3{
+  margin:0 0 4px;
+}
+
+.career-goal-body{
+  border-top:1px solid var(--surface-2);
+  margin-top:14px;
+  padding-top:14px;
+  animation:fadeIn 0.2s ease;
+}
+
+.career-goal-actions{
+  display:flex;
+  gap:10px;
+  margin-top:10px;
+}
+
+.career-goal-actions button{
+  width:auto;
+  padding:8px 14px;
+}
+
+.delete-career-goal{
+  background:#7f1d1d;
+  color:white;
+}
+
+.readiness-list{
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(240px,1fr));
+  gap:10px;
+}
+
+.readiness-item{
+  background:var(--surface-3);
+  border-radius:var(--radius-sm);
+  padding:12px;
+}
+
+.readiness-item p{
+  margin:4px 0;
+}
+
+.evidence-rollup{
+  display:flex;
+  flex-direction:column;
+  gap:12px;
+}
+
+.evidence-rollup-group{
+  background:var(--surface-3);
+  border-radius:var(--radius-sm);
+  padding:12px;
+}
+
+.career-goal-body .skill-related-projects small{
+  opacity:.7;
+}
+
+.career-goal-body .skill-section{
+  margin-bottom:22px;
+  padding-bottom:22px;
+  border-bottom:1px solid color-mix(in srgb, var(--surface-2) 60%, transparent);
+}
+
+.career-goal-body .skill-section:last-child{
+  margin-bottom:0;
+  padding-bottom:0;
+  border-bottom:none;
+}
+
+#addCareerGoalBtn{
+  background:var(--accent);
+}
+
+.add-roadmap-stage{
+  background:var(--accent) !important;
+  color:white;
+}
+
+.career-goal-body .project-tabs{
+  margin-bottom:18px;
+}
+
+body[data-module="career"] .ambient-background{
+  background-image: url("../assets/backgrounds/career-bg.svg");
+  background-size: cover;
+  background-position: center;
+  opacity: 0.6;
+}
+
+.readiness-mastered{
+  background:color-mix(in srgb, var(--success) 15%, var(--surface-3));
+  border:1px solid color-mix(in srgb, var(--success) 30%, transparent);
+}
+
+.readiness-mastered-badge{
+  color:var(--success);
+  font-weight:700;
+}

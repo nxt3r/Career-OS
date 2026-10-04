@@ -1,0 +1,15 @@
+#categoryList .milestone span{
+  flex:1;
+}
+
+#addCategoryBtn,
+#addSkillCategoryBtn{
+  background:var(--accent);
+}
+
+body[data-module="settings"] .ambient-background{
+  background-image: url("../assets/backgrounds/settings-bg.svg");
+  background-size: cover;
+  background-position: center;
+  opacity: 0.6;
+}

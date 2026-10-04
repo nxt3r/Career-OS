@@ -1,0 +1,149 @@
+.hero-card{
+  background: linear-gradient(135deg, var(--accent), color-mix(in srgb, var(--accent) 70%, black));
+  color:#fff;
+}
+
+.hero-label{
+  margin:0;
+  opacity:.85;
+  letter-spacing:1px;
+  font-size:.8rem;
+  font-weight:600;
+}
+
+.hero-card h1{
+  margin:.4rem 0;
+}
+
+.hero-card h1 span{
+  font-size:1.1rem;
+  opacity:.8;
+  font-weight:400;
+}
+
+.hero-progress{
+  margin:14px 0;
+}
+
+.stat-card p{
+  margin:0;
+  opacity:.7;
+  font-size:.9rem;
+}
+
+.stat-card h2{
+  margin:8px 0 4px;
+}
+
+.stat-card small{
+  opacity:.7;
+}
+
+/* ===========================
+   GOAL-PROGRESS GLOW STATES
+=========================== */
+
+.glow-approaching-success{
+  animation:pulseApproach 2.5s ease-in-out infinite;
+}
+
+.glow-success{
+  position:relative;
+  background:linear-gradient(135deg, color-mix(in srgb, var(--success) 55%, black), var(--success));
+  overflow:hidden;
+  box-shadow:0 0 30px 4px rgba(34, 197, 94, 0.4);
+}
+
+.glow-success::after{
+  content:"";
+  position:absolute;
+  top:0;
+  left:-150%;
+  width:60%;
+  height:100%;
+  background:linear-gradient(
+    120deg,
+    transparent 0%,
+    rgba(255,255,255,0.05) 30%,
+    rgba(255,255,255,0.45) 50%,
+    rgba(255,255,255,0.05) 70%,
+    transparent 100%
+  );
+  transform:skewX(-20deg);
+  animation:shimmerSweep 2.8s ease-in-out infinite;
+}
+
+@keyframes pulseApproach{
+  0%, 100%{ box-shadow:0 0 0 0 rgba(34, 197, 94, 0); }
+  50%{ box-shadow:0 0 24px 4px rgba(34, 197, 94, 0.45); }
+}
+
+@keyframes shimmerSweep{
+  0%{ left:-150%; }
+  60%{ left:150%; }
+  100%{ left:150%; }
+}
+
+/* DISTRACTION — three-tier heartbeat escalation */
+
+.glow-danger-low{
+  animation:heartbeat 3s ease-in-out infinite;
+}
+
+.glow-danger-high{
+  animation:heartbeat 1.6s ease-in-out infinite;
+}
+
+.glow-danger-max{
+  animation:alertPulse 2.4s ease-in-out infinite;
+}
+
+@keyframes heartbeat{
+  0%, 100%{ background:var(--surface); }
+  50%{ background:color-mix(in srgb, var(--surface) 75%, var(--danger) 25%); }
+}
+
+@keyframes alertPulse{
+  0%, 20%{
+    background:color-mix(in srgb, var(--surface) 40%, var(--danger) 60%);
+    box-shadow:0 0 30px 6px rgba(239, 68, 68, 0.6);
+  }
+  35%{
+    background:var(--surface);
+    box-shadow:0 0 0 0 rgba(239, 68, 68, 0);
+  }
+  100%{
+    background:color-mix(in srgb, var(--surface) 40%, var(--danger) 60%);
+    box-shadow:0 0 30px 6px rgba(239, 68, 68, 0.6);
+  }
+}
+
+.danger-icon{
+  display:inline-block;
+  margin-left:4px;
+  animation:iconShake 1.8s ease-in-out infinite;
+}
+
+@keyframes iconShake{
+  0%, 100%{ transform:rotate(0deg); }
+  10%{ transform:rotate(-8deg); }
+  20%{ transform:rotate(8deg); }
+  30%{ transform:rotate(0deg); }
+}
+
+.grid .stat-card{
+  min-width:0;
+}
+
+.inbox-empty{
+  opacity:.6;
+  font-size:.9rem;
+  padding:12px 0;
+}
+
+body[data-module="dashboard"] .ambient-background{
+  background-image: url("../assets/backgrounds/dashboard-bg.svg");
+  background-size: cover;
+  background-position: center;
+  opacity: 0.6;
+}

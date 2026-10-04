@@ -1,12 +1,54 @@
-export function getWeekSessions(sessions){
+export function replayFadeIn(element) {
 
-  const now = new Date();
+  if (!element) return;
 
-  const start = new Date(now);
+  element.classList.remove("fade-in");
 
-  start.setDate(now.getDate() - now.getDay());
+  void element.offsetWidth; // force reflow
 
-  start.setHours(0,0,0,0);
+  element.classList.add("fade-in");
+
+}
+
+
+const DAY_INDEX = {
+  sunday: 0, monday: 1, tuesday: 2, wednesday: 3,
+  thursday: 4, friday: 5, saturday: 6
+};
+
+
+export function getWeekStartDate(referenceDate, weekStartSetting) {
+
+  const targetDay =
+    DAY_INDEX[weekStartSetting] ?? 1;
+
+  const date =
+    new Date(referenceDate);
+
+  const currentDay =
+    date.getDay();
+
+  let diff =
+    currentDay - targetDay;
+
+  if (diff < 0) diff += 7;
+
+  date.setDate(date.getDate() - diff);
+
+  date.setHours(0, 0, 0, 0);
+
+  return date;
+
+}
+
+
+export function getWeekSessions(sessions, stateRef){
+
+  const weekStart =
+    stateRef?.settings?.weekStart || "monday";
+
+  const start =
+    getWeekStartDate(new Date(), weekStart);
 
   return sessions.filter(session => session.start >= start.getTime());
 

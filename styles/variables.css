@@ -1,18 +1,48 @@
-{`:root{
+:root{
 
-  --bg:#0F172A;
-  --surface:#1E293B;
-  --surface2:#334155;
+  /* BASE */
+  --bg: #0A0B0C;
+  --surface: #202327;
+  --surface-2: #32373C;
+  --surface-3: #16181A;
 
-  --text:#F8FAFC;
-  --muted:#94A3B8;
+  /* PREMIUM SURFACE TREATMENT */
+  --surface-sheen: rgba(255, 255, 255, 0.04);
+  --surface-edge: rgba(255, 255, 255, 0.06);
+  --surface-edge-strong: rgba(255, 255, 255, 0.1);
 
-  --blue:#3B82F6;
-  --green:#22C55E;
-  --purple:#A855F7;
-  --orange:#F97316;
-  --red:#EF4444;
+  --text: #F8FAFC;
+  --muted: #94A3B8;
 
-  --radius:18px;
+  --radius: 18px;
+  --radius-sm: 10px;
 
-}`}
+  /* SEMANTIC (non-module) */
+  --success: #22C55E;
+  --danger: #EF4444;
+  --warning: #EAB308;
+
+  /* PER-MODULE ACCENTS */
+  --accent-dashboard: #3B82F6;
+  --accent-timer: #06B6D4;
+  --accent-projects: #22C55E;
+  --accent-skills: #A855F7;
+  --accent-career: #F59E0B;
+  --accent-reviews: #6366F1;
+  --accent-settings: #64748B;
+
+  /* ACTIVE ACCENT — set per page via body[data-module] below */
+  --accent: var(--accent-dashboard);
+
+}
+
+/* Each page sets data-module on <body>; this switches
+   --accent to that module's color everywhere it's used. */
+
+body[data-module="dashboard"]{ --accent: var(--accent-dashboard); }
+body[data-module="timer"]{ --accent: var(--accent-timer); }
+body[data-module="projects"]{ --accent: var(--accent-projects); }
+body[data-module="skills"]{ --accent: var(--accent-skills); }
+body[data-module="career"]{ --accent: var(--accent-career); }
+body[data-module="reviews"]{ --accent: var(--accent-reviews); }
+body[data-module="settings"]{ --accent: var(--accent-settings); }

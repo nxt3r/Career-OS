@@ -1,5 +1,6 @@
 import { state } from "../../core/state.js";
 import { getCategoryNamesByGroup } from "../../core/categories.js";
+import { getWeekStartDate } from "../../core/utils.js";
 
 
 /*
@@ -171,18 +172,11 @@ export function getWeeklyFocusHours() {
   const focusCategories =
     getCategoryNamesByGroup("Focus");
 
-  const today = new Date();
+  const weekStart =
+    state.settings?.weekStart || "monday";
 
-  const day = today.getDay();
-
-  const mondayOffset =
-    day === 0 ? -6 : 1 - day;
-
-  const monday = new Date(today);
-
-  monday.setDate(today.getDate() + mondayOffset);
-
-  monday.setHours(0,0,0,0);
+  const start =
+    getWeekStartDate(new Date(), weekStart);
 
   const total =
     state.sessions
@@ -193,7 +187,7 @@ export function getWeeklyFocusHours() {
           new Date(session.start);
 
         return (
-          date >= monday &&
+          date >= start &&
           focusCategories.includes(session.category)
         );
 

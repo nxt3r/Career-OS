@@ -1,7 +1,11 @@
 import { state } from "../../core/state.js";
 import { saveData } from "../../core/storage.js";
+import { openModal, closeModal, showModalError, confirmDelete, confirmSimple } from "../../core/modal.js";
+import { replayFadeIn } from "../../core/utils.js";
+import { renderLinkChip, attachLinkChipEvents } from "../../core/linkChip.js";
 
 let openedSkill = null;
+let activeSkillTab = {};
 let reviewingPromotion = null;
 
 const LEVELS = [
@@ -13,11 +17,20 @@ const LEVELS = [
 ];
 
 const STATUS_MAP = {
-  1: "Learning",
-  2: "Active",
-  3: "Paused",
-  4: "Mastered"
+  1: "Active",
+  2: "Paused"
 };
+
+
+export function getDisplayStatus(skill) {
+
+  if (skill.level >= skill.targetLevel || skill.level >= 5) {
+    return "Mastered";
+  }
+
+  return skill.status === "Learning" ? "Active" : skill.status;
+
+}
 
 const EVIDENCE_TYPES = {
   1: "Project",
@@ -33,9 +46,15 @@ const EVIDENCE_TYPES = {
    MAIN SKILLS VIEW
    ========================================================= */
 
-export function renderSkills(app) {
+export function renderSkills(app, targetId) {
 
   if (!app) return;
+
+  if (targetId) {
+
+    openedSkill = targetId;
+
+  }
 
   app.innerHTML = `
     <section>
@@ -107,12 +126,9 @@ function renderSkillList(filter = "All") {
   if (visibleSkills.length === 0) {
 
     container.innerHTML = `
-      <div class="card">
-
-        <p>
-          No skills added yet.
-        </p>
-
+      <div class="empty-state">
+        <span class="empty-state-icon">🌱</span>
+        <p>No skills added yet.</p>
       </div>
     `;
 
@@ -123,8 +139,11 @@ function renderSkillList(filter = "All") {
     visibleSkills
       .map(skill => renderSkillCard(skill))
       .join("");
-}
 
+  replayFadeIn(container);
+
+  attachLinkChipEvents(container);
+}
 
 /* =========================================================
    SKILL CARD
@@ -149,19 +168,19 @@ function renderSkillCard(skill) {
         card
         skill-card
         ${expanded ? "expanded-skill" : ""}
+        ${getStaleGlowClass(skill)}
       "
     >
 
       <div
-        class="skill-header"
+        class="skill-header ${!expanded ? "skill-header-collapsed" : ""}"
         data-id="${skill.id}"
       >
 
-                <div>
+        <div>
 
           <h3>
             ${escapeHTML(skill.name)}
-            ${renderStaleIndicator(skill)}
           </h3>
 
           <p>
@@ -183,9 +202,9 @@ function renderSkillCard(skill) {
 
           <p>
             Status:
-            <strong>
-              ${escapeHTML(skill.status)}
-            </strong>
+            <span class="status ${getDisplayStatus(skill).toLowerCase()}">
+              ${getDisplayStatus(skill)}
+            </span>
           </p>
 
         </div>
@@ -217,100 +236,96 @@ function renderSkillCard(skill) {
 
 function renderExpandedSkill(skill) {
 
+  const tab =
+    activeSkillTab[skill.id] || "overview";
+
+  return `
+    <div class="skill-body">
+
+      <div class="project-tabs">
+
+        <button
+          class="tab-btn ${tab === "overview" ? "active" : ""}"
+          data-skill="${skill.id}"
+          data-tab="overview"
+        >
+          Overview
+        </button>
+
+        <button
+          class="tab-btn ${tab === "capabilities" ? "active" : ""}"
+          data-skill="${skill.id}"
+          data-tab="capabilities"
+        >
+          Capabilities
+        </button>
+
+        <button
+          class="tab-btn ${tab === "evidence" ? "active" : ""}"
+          data-skill="${skill.id}"
+          data-tab="evidence"
+        >
+          Evidence
+        </button>
+
+        <button
+          class="tab-btn ${tab === "practice" ? "active" : ""}"
+          data-skill="${skill.id}"
+          data-tab="practice"
+        >
+          Practice & History
+        </button>
+
+      </div>
+
+      <div class="fade-in" id="skillTabContent-${skill.id}">
+
+        ${renderSkillTab(skill, tab)}
+
+      </div>
+
+
+      <hr>
+
+
+      <!-- SKILL MANAGEMENT -->
+
+      <div class="skill-actions">
+
+        <button
+          class="edit-skill"
+          data-skill="${skill.id}"
+        >
+          Edit Skill
+        </button>
+
+        <button
+          class="delete-skill"
+          data-skill="${skill.id}"
+        >
+          Delete Skill
+        </button>
+
+      </div>
+
+    </div>
+  `;
+}
+
+
+function renderSkillTab(skill, tab) {
+
   const levelName =
     getLevelName(skill.level);
 
   const targetLevelName =
     getLevelName(skill.targetLevel);
 
-  return `
-    <div class="skill-body">
 
-      <!-- ABOUT -->
+  if (tab === "capabilities") {
 
-      <div class="skill-section">
-
-        <h4>
-          About This Skill
-        </h4>
-
-        <p>
-          ${
-            skill.description
-              ? escapeHTML(skill.description)
-              : "No description."
-          }
-        </p>
-
-      </div>
-
-
-      <!-- SKILL LEVEL -->
-
-      <div class="skill-section">
-
-        <h4>
-          Skill Level
-        </h4>
-
-        <p>
-          Current:
-          <strong>
-            ${levelName}
-          </strong>
-        </p>
-
-        <p>
-          Target:
-          <strong>
-            ${targetLevelName}
-          </strong>
-        </p>
-
-        ${renderCurrentLevelProgress(skill)}
-
-        ${renderLevelProgression(skill)}
-
-      </div>
-
-
-      <!-- LEVEL HISTORY -->
-
-      <div class="skill-section">
-
-        <h4>
-          Level History
-        </h4>
-
-        ${renderLevelHistory(skill)}
-
-      </div>
-
-
-      <!-- STATUS -->
-
-      <div class="skill-section">
-
-        <h4>
-          Status
-        </h4>
-
-        <p>
-          <strong>
-            ${escapeHTML(skill.status)}
-          </strong>
-        </p>
-
-      </div>
-
-
-      <!-- CAPABILITY FRAMEWORK -->
-
+    return `
       <div class="skill-section capability-section">
-
-        <h4>
-          Capability Framework
-        </h4>
 
         <p>
           Define what being good at this skill
@@ -320,15 +335,32 @@ function renderExpandedSkill(skill) {
         ${renderCapabilities(skill)}
 
       </div>
+    `;
+
+  }
 
 
-            <!-- PRACTICE -->
+  if (tab === "evidence") {
+
+    return `
+      <div class="skill-section">
+
+        ${renderSkillEvidence(skill)}
+
+      </div>
+    `;
+
+  }
+
+
+  if (tab === "practice") {
+
+    return `
 
       <div class="skill-section">
 
         <h4>
           Practice
-          ${renderStaleIndicator(skill)}
         </h4>
 
         <p>
@@ -369,7 +401,16 @@ function renderExpandedSkill(skill) {
       </div>
 
 
-      <!-- RELATED PROJECTS -->
+      <div class="skill-section">
+
+        <h4>
+          Level History
+        </h4>
+
+        ${renderLevelHistory(skill)}
+
+      </div>
+
 
       <div class="skill-section">
 
@@ -381,42 +422,83 @@ function renderExpandedSkill(skill) {
 
       </div>
 
+    `;
 
-      <!-- EVIDENCE -->
-
-      <div class="skill-section">
-
-        <h4>
-          Evidence
-        </h4>
-
-        ${renderSkillEvidence(skill)}
-
-      </div>
+  }
 
 
-      <!-- SKILL MANAGEMENT -->
+  /* OVERVIEW (default) */
 
-      <div class="skill-actions">
+  return `
 
-        <button
-          class="edit-skill"
-          data-skill="${skill.id}"
-        >
-          Edit Skill
-        </button>
+    <div class="skill-section">
 
-        <button
-          class="delete-skill"
-          data-skill="${skill.id}"
-        >
-          Delete Skill
-        </button>
+      <h4>
+        About This Skill
+      </h4>
 
-      </div>
+      <p>
+        ${
+          skill.description
+            ? escapeHTML(skill.description)
+            : "No description."
+        }
+      </p>
 
     </div>
+
+
+    <div class="skill-section">
+
+      <h4>
+        Skill Level
+      </h4>
+
+      <p>
+        Current:
+        <strong>
+          ${levelName}
+        </strong>
+      </p>
+
+      <p>
+        Target:
+        <strong>
+          ${targetLevelName}
+        </strong>
+      </p>
+
+      ${renderCurrentLevelProgress(skill)}
+
+      ${renderLevelProgression(skill)}
+
+    </div>
+
+
+    <div class="skill-section">
+
+      <h4>
+        Status
+      </h4>
+
+      ${
+        getDisplayStatus(skill) === "Mastered"
+          ? `<span class="status mastered">🏆 Mastered</span>`
+          : `
+            <button
+              class="status status-toggle-btn ${getDisplayStatus(skill).toLowerCase()}"
+              data-skill="${skill.id}"
+              data-action="toggle-status"
+            >
+              ${getDisplayStatus(skill)} (click to toggle)
+            </button>
+          `
+      }
+
+    </div>
+
   `;
+
 }
 
 
@@ -834,7 +916,7 @@ function renderRelatedProjects(skill) {
         projects
           .map(project => `
             <li>
-              ${escapeHTML(project.name)}
+              ${renderLinkChip("project", project.id, project.name)}
             </li>
           `)
           .join("")
@@ -979,6 +1061,57 @@ function handleSkillListClick(event) {
   if (!button) return;
 
   event.stopPropagation();
+
+
+  /*
+   * SKILL TAB SWITCH
+   */
+
+  if (button.dataset.action === "toggle-status") {
+
+    const skill = findSkill(button.dataset.skill);
+
+    if (!skill) return;
+
+    skill.status = skill.status === "Active" ? "Paused" : "Active";
+
+    saveData(state);
+
+    openedSkill = skill.id;
+
+    renderSkills(document.getElementById("app"));
+
+    return;
+
+  }
+
+  if (
+    button.classList.contains(
+      "tab-btn"
+    )
+  ) {
+
+    const skillId =
+      button.dataset.skill;
+
+    const tabName =
+      button.dataset.tab;
+
+    activeSkillTab[skillId] =
+      tabName;
+
+    const activeFilter =
+      document.querySelector(".skill-filter.active");
+
+    renderSkillList(
+      activeFilter
+        ? activeFilter.dataset.filter
+        : "All"
+    );
+
+    return;
+
+  }
 
 
   /*
@@ -1398,278 +1531,223 @@ function handleSkillListClick(event) {
 
 function openAddSkillForm() {
 
-  const name =
-    prompt(
-      "Skill name:"
-    );
-
-  if (
-    name === null ||
-    !name.trim()
-  ) {
-    return;
-  }
-
-  const trimmedName =
-    name.trim();
-
-  const nameExists =
-    state.skills.some(
-      skill =>
-        skill.name.toLowerCase() ===
-        trimmedName.toLowerCase()
-    );
-
-  if (nameExists) {
-
-    alert(
-      "A skill with this name already exists."
-    );
-
-    return;
-
-  }
-
-
-  /*
-   * CATEGORY
-   */
-
   const categoryOptions =
+    `<option value="" disabled selected>Select a category...</option>` +
     state.skillCategories
-      .map(
-        (category, index) =>
-          `${index + 1}. ${category}`
-      )
-      .join("\n");
+      .map(category => `
+        <option value="${escapeHTML(category)}">${escapeHTML(category)}</option>
+      `)
+      .join("");
 
-  const categoryChoice =
-    prompt(
-      "Choose category:\n\n" +
-      categoryOptions
-    );
-
-  if (
-    categoryChoice === null ||
-    !categoryChoice.trim()
-  ) {
-    return;
-  }
-
-  const categoryIndex =
-    Number(
-      categoryChoice.trim()
-    ) - 1;
-
-  if (
-    !Number.isInteger(categoryIndex) ||
-    !state.skillCategories[categoryIndex]
-  ) {
-
-    alert(
-      "Invalid category."
-    );
-
-    return;
-  }
-
-  const category =
-    state.skillCategories[
-      categoryIndex
-    ];
-
-
-  /*
-   * CURRENT LEVEL
-   */
-
-  const level =
-    askLevel(
-      "Current level:"
-    );
-
-  if (!level) return;
-
-
-  /*
-   * TARGET LEVEL
-   */
-
-  const targetLevel =
-    askTargetLevel(
-      level
-    );
-
-  if (!targetLevel) return;
-
-
-  /*
-   * STATUS
-   */
-
-  const statusChoice =
-    prompt(
-      "Status:\n\n" +
-      "1. Learning\n" +
-      "2. Active\n" +
-      "3. Paused\n" +
-      "4. Mastered"
-    );
-
-  if (
-    statusChoice === null ||
-    !statusChoice.trim()
-  ) {
-    return;
-  }
-
-  const status =
-    STATUS_MAP[
-      Number(
-        statusChoice.trim()
-      )
-    ];
-
-  if (!status) {
-
-    alert(
-      "Invalid status."
-    );
-
-    return;
-  }
-
-
-  /*
-   * DESCRIPTION
-   */
-
-  const description =
-    prompt(
-      "Skill description:"
-    ) || "";
-
-
-  /*
-   * RELATED PROJECTS
-   */
-
-  const relatedProjects = [];
+  const levelOptions =
+    `<option value="" disabled selected>Select a level...</option>` +
+    LEVELS
+      .map((levelName, index) => `
+        <option value="${index + 1}">${levelName}</option>
+      `)
+      .join("");
 
   const activeProjects =
-    state.projects.filter(
-      project =>
-        !project.archived
-    );
+    state.projects.filter(project => !project.archived);
 
-  if (activeProjects.length > 0) {
+  const projectCheckboxes =
+    activeProjects
+      .map(project => `
+        <label class="modal-checkbox-row">
+          <input type="checkbox" value="${project.id}" class="add-skill-project-checkbox">
+          ${escapeHTML(project.name)}
+        </label>
+      `)
+      .join("");
 
-    const projectOptions =
-      activeProjects
-        .map(
-          (project, index) =>
-            `${index + 1}. ${project.name}`
-        )
-        .join("\n");
+  openModal(`
 
-    const projectChoice =
-      prompt(
-        "Related projects (optional).\n\n" +
-        projectOptions +
-        "\n\n" +
-        "Enter project numbers separated by commas, " +
-        "or leave blank."
+    <h3>Add Skill</h3>
+
+    <div id="addSkillError" class="auth-error"></div>
+
+    <div class="modal-field">
+      <label>Name</label>
+      <input type="text" id="addSkillName" placeholder="e.g. React">
+    </div>
+
+    <div class="modal-field">
+      <label>Category</label>
+      <select id="addSkillCategory">${categoryOptions}</select>
+    </div>
+
+    <div class="modal-field">
+      <label>Current Level</label>
+      <select id="addSkillLevel">${levelOptions}</select>
+    </div>
+
+    <div class="modal-field">
+      <label>Target Level</label>
+      <select id="addSkillTargetLevel">${levelOptions}</select>
+    </div>
+
+    <div class="modal-field">
+      <label>Status</label>
+      <select id="addSkillStatus">
+        <option value="" disabled selected>Select a status...</option>
+        <option value="Active">Active</option>
+        <option value="Paused">Paused</option>
+      </select>
+    </div>
+
+    <div class="modal-field">
+      <label>Description (optional)</label>
+      <textarea id="addSkillDescription"></textarea>
+    </div>
+
+    ${
+      activeProjects.length > 0
+        ? `
+          <div class="modal-field">
+            <label>Related Projects (optional)</label>
+            <div class="modal-checkbox-list">${projectCheckboxes}</div>
+          </div>
+        `
+        : ""
+    }
+
+    <div class="modal-actions">
+      <button class="modal-save" id="addSkillSave">Create Skill</button>
+      <button class="modal-cancel" id="addSkillCancel">Cancel</button>
+    </div>
+
+  `);
+
+  document
+    .getElementById("addSkillCancel")
+    .addEventListener("click", closeModal);
+
+  document
+    .getElementById("addSkillSave")
+    .addEventListener("click", () => {
+
+      const errorBox =
+        document.getElementById("addSkillError");
+
+      const name =
+        document.getElementById("addSkillName").value.trim();
+
+      if (!name) {
+
+        showModalError(errorBox, "Skill name cannot be empty.");
+
+        return;
+
+      }
+
+      const nameExists =
+        state.skills.some(
+          skill =>
+            skill.name.toLowerCase() === name.toLowerCase()
+        );
+
+      if (nameExists) {
+
+        showModalError(errorBox, "A skill with this name already exists.");
+
+        return;
+
+      }
+
+      const category =
+        document.getElementById("addSkillCategory").value;
+
+      if (!category) {
+
+        showModalError(errorBox, "Choose a category.");
+
+        return;
+
+      }
+
+      const levelValue =
+        document.getElementById("addSkillLevel").value;
+
+      if (!levelValue) {
+
+        showModalError(errorBox, "Choose a current level.");
+
+        return;
+
+      }
+
+      const level = Number(levelValue);
+
+      const targetLevelValue =
+        document.getElementById("addSkillTargetLevel").value;
+
+      if (!targetLevelValue) {
+
+        showModalError(errorBox, "Choose a target level.");
+
+        return;
+
+      }
+
+      const targetLevel = Number(targetLevelValue);
+
+      if (targetLevel < level) {
+
+        showModalError(errorBox, "Target level cannot be below current level.");
+
+        return;
+
+      }
+
+      const status =
+        document.getElementById("addSkillStatus").value;
+
+      if (!status) {
+
+        showModalError(errorBox, "Choose a status.");
+
+        return;
+
+      }
+
+      const description =
+        document.getElementById("addSkillDescription").value.trim();
+
+      const relatedProjects =
+        Array.from(
+          document.querySelectorAll(".add-skill-project-checkbox:checked")
+        ).map(checkbox => checkbox.value);
+
+      state.skills.push({
+
+        id: crypto.randomUUID(),
+        name,
+        category,
+        level,
+        targetLevel,
+        status,
+        description,
+        capabilities: [],
+        lastPracticed: null,
+        relatedProjects,
+        evidence: [],
+        levelHistory: []
+
+      });
+
+      saveData(state);
+
+      closeModal();
+
+      openedSkill =
+        state.skills[state.skills.length - 1].id;
+
+      renderSkills(
+        document.getElementById("app")
       );
 
-    if (
-      projectChoice &&
-      projectChoice.trim()
-    ) {
+    });
 
-      projectChoice
-        .split(",")
-        .map(
-          value =>
-            Number(
-              value.trim()
-            ) - 1
-        )
-        .forEach(index => {
-
-          const project =
-            activeProjects[index];
-
-          if (
-            project &&
-            !relatedProjects.includes(
-              project.id
-            )
-          ) {
-
-            relatedProjects.push(
-              project.id
-            );
-          }
-        });
-    }
-  }
-
-
-  /*
-   * CREATE
-   */
-
-  state.skills.push({
-
-    id:
-      crypto.randomUUID(),
-
-    name:
-      trimmedName,
-
-    category:
-      category,
-
-    level:
-      level,
-
-    targetLevel:
-      targetLevel,
-
-    status:
-      status,
-
-    description:
-      description.trim(),
-
-    capabilities:
-      [],
-
-    lastPracticed:
-      null,
-
-    relatedProjects:
-      relatedProjects,
-
-    evidence:
-      [],
-
-    levelHistory:
-      []
-
-  });
-
-
-  saveData(state);
-
-  openedSkill =
-    state.skills[
-      state.skills.length - 1
-    ].id;
-
-  renderSkills(
-    document.getElementById("app")
-  );
 }
 
 
@@ -1679,206 +1757,162 @@ function openAddSkillForm() {
 
 function editSkill(skill) {
 
-  /*
-   * IMPORTANT:
-   * Current level is intentionally NOT editable.
-   *
-   * Level changes must happen through promotion
-   * so level history remains trustworthy.
-   */
-
-
-  /*
-   * NAME
-   */
-
-  const name =
-    prompt(
-      "Skill name:",
-      skill.name
-    );
-
-  if (name === null) return;
-
-  if (!name.trim()) {
-
-    alert(
-      "Skill name cannot be empty."
-    );
-
-    return;
-  }
-
-  const trimmedName =
-    name.trim();
-
-  const nameExists =
-    state.skills.some(
-      existingSkill =>
-        existingSkill.id !== skill.id &&
-        existingSkill.name.toLowerCase() ===
-        trimmedName.toLowerCase()
-    );
-
-  if (nameExists) {
-
-    alert(
-      "A skill with this name already exists."
-    );
-
-    return;
-
-  }
-
-
-  /*
-   * CATEGORY
-   */
-
   const categoryOptions =
     state.skillCategories
-      .map(
-        (category, index) =>
-          `${index + 1}. ${category}`
-      )
-      .join("\n");
+      .map(category => `
+        <option value="${escapeHTML(category)}" ${category === skill.category ? "selected" : ""}>
+          ${escapeHTML(category)}
+        </option>
+      `)
+      .join("");
 
-  const currentCategoryIndex =
-    state.skillCategories.indexOf(
-      skill.category
-    );
+  const levelOptions =
+    LEVELS
+      .map((levelName, index) => {
 
-  const categoryChoice =
-    prompt(
-      "Choose category:\n\n" +
-      categoryOptions,
-      currentCategoryIndex >= 0
-        ? String(
-            currentCategoryIndex + 1
-          )
-        : ""
-    );
+        const levelNum = index + 1;
 
-  if (categoryChoice === null) {
-    return;
-  }
+        if (levelNum < skill.level) return "";
 
-  const categoryIndex =
-    Number(
-      categoryChoice.trim()
-    ) - 1;
+        return `
+          <option value="${levelNum}" ${levelNum === skill.targetLevel ? "selected" : ""}>
+            ${levelName}
+          </option>
+        `;
 
-  if (
-    !Number.isInteger(categoryIndex) ||
-    !state.skillCategories[categoryIndex]
-  ) {
+      })
+      .join("");
 
-    alert(
-      "Invalid category."
-    );
+  const isMastered =
+    getDisplayStatus(skill) === "Mastered";
 
-    return;
-  }
+  const statusOptions =
+    Object.values(STATUS_MAP)
+      .map(name => `
+        <option value="${name}" ${name === skill.status ? "selected" : ""}>
+          ${name}
+        </option>
+      `)
+      .join("");
 
-  const category =
-    state.skillCategories[
-      categoryIndex
-    ];
+  openModal(`
 
+    <h3>Edit Skill</h3>
 
-  /*
-   * TARGET LEVEL
-   */
+    <div id="editSkillError" class="auth-error"></div>
 
-  const targetLevel =
-    askTargetLevelWithDefault(
-      skill.level,
-      skill.targetLevel
-    );
+    <div class="modal-field">
+      <label>Name</label>
+      <input type="text" id="editSkillName" value="${escapeHTML(skill.name)}">
+    </div>
 
-  if (!targetLevel) return;
+    <div class="modal-field">
+      <label>Category</label>
+      <select id="editSkillCategory">${categoryOptions}</select>
+    </div>
 
+    <div class="modal-field">
+      <label>Target Level (current: ${getLevelName(skill.level)}, locked — change via promotion)</label>
+      <select id="editSkillTargetLevel">${levelOptions}</select>
+    </div>
 
-  /*
-   * STATUS
-   */
+    <div class="modal-field">
+      <label>Description</label>
+      <textarea id="editSkillDescription">${escapeHTML(skill.description || "")}</textarea>
+    </div>
 
-  const statusChoice =
-    prompt(
-      "Status:\n\n" +
-      "1. Learning\n" +
-      "2. Active\n" +
-      "3. Paused\n" +
-      "4. Mastered",
-      getStatusNumber(
-        skill.status
-      )
-    );
+    <div class="modal-actions">
+      <button class="modal-save" id="editSkillSave">Save</button>
+      <button class="modal-cancel" id="editSkillCancel">Cancel</button>
+    </div>
 
-  if (statusChoice === null) {
-    return;
-  }
+  `);
 
-  const status =
-    STATUS_MAP[
-      Number(
-        statusChoice.trim()
-      )
-    ];
+  document
+    .getElementById("editSkillCancel")
+    .addEventListener("click", closeModal);
 
-  if (!status) {
+  document
+    .getElementById("editSkillSave")
+    .addEventListener("click", () => {
 
-    alert(
-      "Invalid status."
-    );
+      const errorBox =
+        document.getElementById("editSkillError");
 
-    return;
-  }
+      const newName =
+        document.getElementById("editSkillName").value.trim();
 
+      if (!newName) {
 
-  /*
-   * DESCRIPTION
-   */
+        showModalError(errorBox, "Skill name cannot be empty.");
 
-  const description =
-    prompt(
-      "Skill description:",
-      skill.description || ""
-    );
+        return;
 
-  if (description === null) {
-    return;
-  }
+      }
 
+      const nameExists =
+        state.skills.some(
+          existingSkill =>
+            existingSkill.id !== skill.id &&
+            existingSkill.name.toLowerCase() ===
+            newName.toLowerCase()
+        );
 
-  /*
-   * APPLY
-   */
+      if (nameExists) {
 
-  skill.name =
-    trimmedName;
+        showModalError(errorBox, "A skill with this name already exists.");
 
-  skill.category =
-    category;
+        return;
 
-  skill.targetLevel =
-    targetLevel;
+      }
 
-  skill.status =
-    status;
+      const newCategory =
+        document.getElementById("editSkillCategory").value;
 
-  skill.description =
-    description.trim();
+      const newTargetLevel =
+        Number(document.getElementById("editSkillTargetLevel").value);
 
+      const newStatus =
+        isMastered
+          ? skill.status
+          : document.getElementById("editSkillStatus").value;
 
-  saveData(state);
+      const newDescription =
+        document.getElementById("editSkillDescription").value.trim();
 
-  openedSkill =
-    skill.id;
+      const wasMastered =
+        getDisplayStatus(skill) === "Mastered";
 
-  renderSkills(
-    document.getElementById("app")
-  );
+      skill.name = newName;
+      skill.category = newCategory;
+      skill.targetLevel = newTargetLevel;
+      skill.description = newDescription;
+
+      const nowMastered =
+        skill.level >= newTargetLevel || skill.level >= 5;
+
+      if (wasMastered && !nowMastered) {
+
+        skill.status = "Active";
+
+      } else if (!isMastered) {
+
+        skill.status = newStatus;
+
+      }
+
+      saveData(state);
+
+      closeModal();
+
+      openedSkill = skill.id;
+
+      renderSkills(
+        document.getElementById("app")
+      );
+
+    });
+
 }
 
 
@@ -1976,143 +2010,39 @@ function promoteSkill(skill) {
 
 function deleteSkill(skill) {
 
-  const confirmation =
-    prompt(
-      `Delete "${skill.name}"?\n\n` +
-      "This will permanently remove this skill " +
-      "and its skill-specific data.\n\n" +
-      "Type the exact skill name to confirm:"
-    );
+  confirmDelete({
 
-  if (confirmation === null) {
-    return;
-  }
+    title: "Delete Skill",
 
-  if (
-    confirmation !== skill.name
-  ) {
+    message: `This permanently removes "${skill.name}" and all its capabilities, evidence, and history.`,
 
-    alert(
-      "Skill name does not match.\n\n" +
-      "The skill was NOT deleted."
-    );
+    confirmText: skill.name,
 
-    return;
-  }
+    onConfirm: () => {
 
-  const confirmed =
-    confirm(
-      `Permanently delete "${skill.name}"?`
-    );
+      state.skills =
+        state.skills.filter(
+          existingSkill => existingSkill.id !== skill.id
+        );
 
-  if (!confirmed) {
-    return;
-  }
+      saveData(state);
 
-  state.skills =
-    state.skills.filter(
-      existingSkill =>
-        existingSkill.id !== skill.id
-    );
+      openedSkill = null;
 
-  saveData(state);
+      renderSkills(
+        document.getElementById("app")
+      );
 
-  openedSkill = null;
+    }
 
-  renderSkills(
-    document.getElementById("app")
-  );
+  });
+
 }
 
 
 /* =========================================================
    LEVEL HELPERS
    ========================================================= */
-
-function askLevel(message) {
-
-  const choice =
-    prompt(
-      message +
-      "\n\n" +
-      "1. Beginner" +
-      "\n2. Elementary" +
-      "\n3. Intermediate" +
-      "\n4. Advanced" +
-      "\n5. Expert" +
-      "\n\nEnter a number from 1 to 5:"
-    );
-
-  if (choice === null) {
-    return null;
-  }
-
-  const level =
-    Number(
-      choice.trim()
-    );
-
-  if (
-    !Number.isInteger(level) ||
-    level < 1 ||
-    level > 5
-  ) {
-
-    alert(
-      "Invalid level.\n\n" +
-      "Enter a number from 1 to 5."
-    );
-
-    return null;
-  }
-
-  return level;
-}
-
-
-function askLevelWithDefault(
-  message,
-  currentLevel
-) {
-
-  const choice =
-    prompt(
-      message +
-      "\n\n" +
-      "1. Beginner" +
-      "\n2. Elementary" +
-      "\n3. Intermediate" +
-      "\n4. Advanced" +
-      "\n5. Expert" +
-      "\n\nEnter a number from 1 to 5:",
-      String(currentLevel)
-    );
-
-  if (choice === null) {
-    return null;
-  }
-
-  const level =
-    Number(
-      choice.trim()
-    );
-
-  if (
-    !Number.isInteger(level) ||
-    level < 1 ||
-    level > 5
-  ) {
-
-    alert(
-      "Invalid level.\n\n" +
-      "Enter a number from 1 to 5."
-    );
-
-    return null;
-  }
-
-  return level;
-}
 
 
 function askTargetLevel(
@@ -2222,24 +2152,6 @@ function askTargetLevelWithDefault(
   }
 
   return targetLevel;
-}
-
-
-function getStatusNumber(status) {
-
-  const statusMap = {
-
-    Learning: "1",
-    Active: "2",
-    Paused: "3",
-    Mastered: "4"
-
-  };
-
-  return (
-    statusMap[status] ||
-    "1"
-  );
 }
 
 
@@ -2473,129 +2385,112 @@ function renderCapability(
 
 function addCapability(skill) {
 
-  const title =
-    prompt(
-      "Capability:\n\n" +
-      "Describe something you should be able " +
-      "to do at a specific level."
-    );
+  const levelOptions =
+    LEVELS
+      .map((levelName, index) => `
+        <option value="${index + 1}" ${index + 1 === skill.level ? "selected" : ""}>${levelName}</option>
+      `)
+      .join("");
 
-  if (title === null) {
-    return;
-  }
+  const validLevelOptions =
+    LEVELS
+      .map((levelName, index) => {
 
-  if (!title.trim()) {
+        const levelNum = index + 1;
 
-    alert(
-      "Capability cannot be empty."
-    );
+        if (levelNum < skill.level) return "";
 
-    return;
-  }
+        return `<option value="${levelNum}" ${levelNum === skill.level ? "selected" : ""}>${levelName}</option>`;
 
-  const trimmedTitle =
-    title.trim();
+      })
+      .join("");
 
-  const level =
-    askCapabilityLevel(
-      skill
-    );
+  openModal(`
 
-  if (!level) return;
+    <h3>Add Capability</h3>
 
-  const levelCapabilities =
-    skill.capabilities.filter(
-      capability =>
-        capability.level === level
-    );
+    <div id="addCapabilityError" class="auth-error"></div>
 
-  const titleExists =
-    levelCapabilities.some(
-      capability =>
-        capability.title.toLowerCase() ===
-        trimmedTitle.toLowerCase()
-    );
+    <div class="modal-field">
+      <label>Capability (something you should be able to do at this level)</label>
+      <input type="text" id="addCapabilityTitle">
+    </div>
 
-  if (titleExists) {
+    <div class="modal-field">
+      <label>Level (current level or above — past levels are locked)</label>
+      <select id="addCapabilityLevel">${validLevelOptions}</select>
+    </div>
 
-    alert(
-      "A capability with this name already exists " +
-      "at this level."
-    );
+    <div class="modal-actions">
+      <button class="modal-save" id="addCapabilitySave">Add</button>
+      <button class="modal-cancel" id="addCapabilityCancel">Cancel</button>
+    </div>
 
-    return;
+  `);
 
-  }
+  document
+    .getElementById("addCapabilityCancel")
+    .addEventListener("click", closeModal);
 
-  skill.capabilities.push({
+  document
+    .getElementById("addCapabilitySave")
+    .addEventListener("click", () => {
 
-    id:
-      crypto.randomUUID(),
+      const errorBox =
+        document.getElementById("addCapabilityError");
 
-    title:
-      trimmedTitle,
+      const trimmedTitle =
+        document.getElementById("addCapabilityTitle").value.trim();
 
-    level:
-      level,
+      if (!trimmedTitle) {
 
-    order:
-      levelCapabilities.length + 1,
+        showModalError(errorBox, "Capability cannot be empty.");
 
-    demonstrated:
-      false
+        return;
 
-  });
+      }
 
-  normalizeCapabilityOrder(skill);
+      const level =
+        Number(document.getElementById("addCapabilityLevel").value);
 
-  saveData(state);
+      const levelCapabilities =
+        skill.capabilities.filter(c => c.level === level);
 
-  openedSkill =
-    skill.id;
+      const titleExists =
+        levelCapabilities.some(
+          c => c.title.toLowerCase() === trimmedTitle.toLowerCase()
+        );
 
-  renderSkills(
-    document.getElementById("app")
-  );
-}
+      if (titleExists) {
 
+        showModalError(errorBox, "A capability with this name already exists at this level.");
 
-function askCapabilityLevel(skill) {
+        return;
 
-  const choice =
-    prompt(
-      "Which skill level does this capability belong to?\n\n" +
-      "1. Beginner\n" +
-      "2. Elementary\n" +
-      "3. Intermediate\n" +
-      "4. Advanced\n" +
-      "5. Expert\n\n" +
-      "Enter a number from 1 to 5:",
-      String(skill.level)
-    );
+      }
 
-  if (choice === null) {
-    return null;
-  }
+      skill.capabilities.push({
+        id: crypto.randomUUID(),
+        title: trimmedTitle,
+        level,
+        order: levelCapabilities.length + 1,
+        demonstrated: false
+      });
 
-  const level =
-    Number(
-      choice.trim()
-    );
+      normalizeCapabilityOrder(skill);
 
-  if (
-    !Number.isInteger(level) ||
-    level < 1 ||
-    level > 5
-  ) {
+      saveData(state);
 
-    alert(
-      "Invalid capability level."
-    );
+      closeModal();
 
-    return null;
-  }
+      openedSkill = skill.id;
 
-  return level;
+      renderSkills(
+        document.getElementById("app")
+      );
+
+    });
+
 }
 
 
@@ -2604,123 +2499,91 @@ function editCapability(
   capability
 ) {
 
-  const title =
-    prompt(
-      "Capability:",
-      capability.title
-    );
+  const levelOptions =
+    LEVELS
+      .map((levelName, index) => {
 
-  if (title === null) {
-    return;
-  }
+        const levelNum = index + 1;
 
-  if (!title.trim()) {
+        if (levelNum < skill.level) return "";
 
-    alert(
-      "Capability cannot be empty."
-    );
+        return `<option value="${levelNum}" ${levelNum === capability.level ? "selected" : ""}>${levelName}</option>`;
 
-    return;
-  }
+      })
+      .join("");
 
-  const trimmedTitle =
-    title.trim();
+  openModal(`
 
-  const oldLevel =
-    capability.level;
+    <h3>Edit Capability</h3>
 
-  const level =
-    askCapabilityLevelForEdit(
-      capability.level
-    );
+    <div id="editCapabilityError" class="auth-error"></div>
 
-  if (!level) return;
+    <div class="modal-field">
+      <label>Capability</label>
+      <input type="text" id="editCapabilityTitle" value="${capability.title}">
+    </div>
 
-  const titleExists =
-    skill.capabilities.some(
-      existingCapability =>
-        existingCapability.id !== capability.id &&
-        existingCapability.level === level &&
-        existingCapability.title.toLowerCase() ===
-        trimmedTitle.toLowerCase()
-    );
+    <div class="modal-field">
+      <label>Level</label>
+      <select id="editCapabilityLevel">${levelOptions}</select>
+    </div>
 
-  if (titleExists) {
+    <div class="modal-actions">
+      <button class="modal-save" id="editCapabilitySave">Save</button>
+      <button class="modal-cancel" id="editCapabilityCancel">Cancel</button>
+    </div>
 
-    alert(
-      "A capability with this name already exists " +
-      "at this level."
-    );
+  `);
 
-    return;
+  document
+    .getElementById("editCapabilityCancel")
+    .addEventListener("click", closeModal);
 
-  }
+  document
+    .getElementById("editCapabilitySave")
+    .addEventListener("click", () => {
 
-  capability.title =
-    trimmedTitle;
+      const errorBox =
+        document.getElementById("editCapabilityError");
 
-  capability.level =
-    level;
+      const trimmedTitle =
+        document.getElementById("editCapabilityTitle").value.trim();
 
-  if (
-    oldLevel !== level
-  ) {
+      if (!trimmedTitle) {
 
-    normalizeCapabilityOrder(
-      skill
-    );
-  }
+        showModalError(errorBox, "Capability cannot be empty.");
 
-  saveData(state);
+        return;
 
-  openedSkill =
-    skill.id;
+      }
 
-  renderSkills(
-    document.getElementById("app")
-  );
-}
+      const oldLevel = capability.level;
 
+      const level =
+        Number(document.getElementById("editCapabilityLevel").value);
 
-function askCapabilityLevelForEdit(
-  currentLevel
-) {
+      capability.title = trimmedTitle;
 
-  const choice =
-    prompt(
-      "Capability level:\n\n" +
-      "1. Beginner\n" +
-      "2. Elementary\n" +
-      "3. Intermediate\n" +
-      "4. Advanced\n" +
-      "5. Expert\n\n" +
-      "Enter a number from 1 to 5:",
-      String(currentLevel)
-    );
+      capability.level = level;
 
-  if (choice === null) {
-    return null;
-  }
+      if (oldLevel !== level) {
 
-  const level =
-    Number(
-      choice.trim()
-    );
+        normalizeCapabilityOrder(skill);
 
-  if (
-    !Number.isInteger(level) ||
-    level < 1 ||
-    level > 5
-  ) {
+      }
 
-    alert(
-      "Invalid capability level."
-    );
+      saveData(state);
 
-    return null;
-  }
+      closeModal();
 
-  return level;
+      openedSkill = skill.id;
+
+      renderSkills(
+        document.getElementById("app")
+      );
+
+    });
+
 }
 
 
@@ -2729,44 +2592,38 @@ function deleteCapability(
   capability
 ) {
 
-  const confirmed =
-    confirm(
-      `Delete capability "${capability.title}"?`
-    );
+  confirmSimple({
 
-  if (!confirmed) {
-    return;
-  }
+    title: "Delete Capability",
 
-  skill.capabilities =
-    skill.capabilities.filter(
-      existingCapability =>
-        existingCapability.id !==
-        capability.id
-    );
+    message: `Delete "${capability.title}"? Any evidence attached to it will also be removed.`,
 
-  /*
-   * Remove evidence attached to the
-   * deleted capability.
-   */
+    onConfirm: () => {
 
-  skill.evidence =
-    skill.evidence.filter(
-      evidence =>
-        evidence.capabilityId !==
-        capability.id
-    );
+      skill.capabilities =
+        skill.capabilities.filter(
+          c => c.id !== capability.id
+        );
 
-  normalizeCapabilityOrder(skill);
+      skill.evidence =
+        skill.evidence.filter(
+          e => e.capabilityId !== capability.id
+        );
 
-  saveData(state);
+      normalizeCapabilityOrder(skill);
 
-  openedSkill =
-    skill.id;
+      saveData(state);
 
-  renderSkills(
-    document.getElementById("app")
-  );
+      openedSkill = skill.id;
+
+      renderSkills(
+        document.getElementById("app")
+      );
+
+    }
+
+  });
+
 }
 
 
@@ -3113,242 +2970,357 @@ function addEvidence(
   capability
 ) {
 
-  if (
-    !Array.isArray(
-      skill.evidence
-    )
-  ) {
+  if (!Array.isArray(skill.evidence)) {
     skill.evidence = [];
   }
 
-
-  /*
-   * One evidence item per capability.
-   */
-
   const existingEvidence =
     skill.evidence.find(
-      evidence =>
-        evidence.capabilityId ===
-        capability.id
+      e => e.capabilityId === capability.id
     );
 
   if (existingEvidence) {
 
-    alert(
-      "This capability already has evidence.\n\n" +
-      "Edit or delete the existing evidence first."
-    );
+    openModal(`
+      <h3>Evidence Already Exists</h3>
+      <p>This capability already has evidence. Edit or delete the existing evidence first.</p>
+      <div class="modal-actions">
+        <button class="modal-cancel" id="evidenceExistsClose">Close</button>
+      </div>
+    `);
+
+    document
+      .getElementById("evidenceExistsClose")
+      .addEventListener("click", closeModal);
 
     return;
+
   }
 
+  const availableProjects =
+    state.projects.filter(p => !p.archived);
 
-  /*
-   * TYPE
-   */
+  const projectOptions =
+    availableProjects
+      .map(p => `<option value="${p.id}">${escapeHTML(p.name)}</option>`)
+      .join("");
 
-  const typeChoice =
-    prompt(
-      "Evidence type:\n\n" +
-      "1. Project\n" +
-      "2. Link\n" +
-      "3. Document\n" +
-      "4. Achievement\n" +
-      "5. Note\n" +
-      "6. Artifact\n\n" +
-      "Enter a number from 1 to 6:"
-    );
+  openModal(`
 
-  if (typeChoice === null) {
-    return;
-  }
+    <h3>Add Evidence</h3>
 
-  const type =
-    EVIDENCE_TYPES[
-      Number(
-        typeChoice.trim()
-      )
-    ];
+    <div id="addEvidenceError" class="auth-error"></div>
 
-  if (!type) {
+    <div class="modal-field">
+      <label>Type</label>
+      <select id="evidenceType">
+        <option value="" disabled selected>Select a type...</option>
+        <option value="Project">Project</option>
+        <option value="Link">Link</option>
+        <option value="Document">Document</option>
+        <option value="Achievement">Achievement</option>
+        <option value="Note">Note</option>
+        <option value="Artifact">Artifact</option>
+      </select>
+    </div>
 
-    alert(
-      "Invalid evidence type."
-    );
+    <div class="modal-field">
+      <label>Title</label>
+      <input type="text" id="evidenceTitle">
+    </div>
 
-    return;
-  }
+    <div class="modal-field">
+      <label>Description</label>
+      <input type="text" id="evidenceDescription">
+    </div>
 
+    <div class="modal-field" id="evidenceProjectField" style="display:none">
+      <label>Project</label>
+      <select id="evidenceProject">
+        <option value="" disabled selected>Select a project...</option>
+        ${projectOptions}
+      </select>
+    </div>
 
-  /*
-   * TITLE
-   */
+    <div class="modal-field" id="evidenceUrlField" style="display:none">
+      <label>URL (optional)</label>
+      <input type="text" id="evidenceUrl" placeholder="https://...">
+    </div>
 
-  const title =
-    prompt(
-      "Evidence title:"
-    );
+    <div class="modal-actions">
+      <button class="modal-save" id="addEvidenceSave">Add Evidence</button>
+      <button class="modal-cancel" id="addEvidenceCancel">Cancel</button>
+    </div>
 
-  if (title === null) {
-    return;
-  }
+  `);
 
-  if (!title.trim()) {
+  document
+    .getElementById("evidenceType")
+    .addEventListener("change", event => {
 
-    alert(
-      "Evidence title cannot be empty."
-    );
+      const type = event.target.value;
 
-    return;
-  }
+      document.getElementById("evidenceProjectField").style.display =
+        type === "Project" ? "" : "none";
 
+      document.getElementById("evidenceUrlField").style.display =
+        (type === "Link" || type === "Document" || type === "Artifact") ? "" : "none";
 
-  /*
-   * DESCRIPTION
-   */
+    });
 
-  const description =
-    prompt(
-      "Evidence description:"
-    );
+  document
+    .getElementById("addEvidenceCancel")
+    .addEventListener("click", closeModal);
 
-  if (description === null) {
-    return;
-  }
+  document
+    .getElementById("addEvidenceSave")
+    .addEventListener("click", () => {
 
-  if (!description.trim()) {
+      const errorBox =
+        document.getElementById("addEvidenceError");
 
-    alert(
-      "Evidence description cannot be empty."
-    );
+      const type =
+        document.getElementById("evidenceType").value;
 
-    return;
-  }
+      if (!type) {
 
+        showModalError(errorBox, "Choose an evidence type.");
 
-  /*
-   * OPTIONAL PROJECT
-   */
+        return;
 
-  let projectId = null;
+      }
 
-  if (type === "Project") {
+      const title =
+        document.getElementById("evidenceTitle").value.trim();
 
-    const availableProjects =
-      state.projects.filter(
-        project =>
-          !project.archived
+      if (!title) {
+
+        showModalError(errorBox, "Evidence title cannot be empty.");
+
+        return;
+
+      }
+
+      const description =
+        document.getElementById("evidenceDescription").value.trim();
+
+      if (!description) {
+
+        showModalError(errorBox, "Evidence description cannot be empty.");
+
+        return;
+
+      }
+
+      let projectId = null;
+
+      if (type === "Project") {
+
+        projectId =
+          document.getElementById("evidenceProject").value;
+
+        if (!projectId) {
+
+          showModalError(errorBox, "Choose a project.");
+
+          return;
+
+        }
+
+      }
+
+      let url = null;
+
+      if (type === "Link" || type === "Document" || type === "Artifact") {
+
+        url =
+          document.getElementById("evidenceUrl").value.trim() || null;
+
+      }
+
+      skill.evidence.push({
+        id: crypto.randomUUID(),
+        capabilityId: capability.id,
+        type,
+        title,
+        description,
+        projectId,
+        url,
+        createdAt: Date.now()
+      });
+
+      saveData(state);
+
+      closeModal();
+
+      openedSkill = skill.id;
+
+      renderSkills(
+        document.getElementById("app")
       );
 
-    if (
-      availableProjects.length === 0
-    ) {
+    });
 
-      alert(
-        "No projects are available."
-      );
+}
 
-      return;
+
+function editEvidence(
+  skill,
+  evidence
+) {
+
+  const showUrl =
+    evidence.type === "Link" ||
+    evidence.type === "Document" ||
+    evidence.type === "Artifact";
+
+  openModal(`
+
+    <h3>Edit Evidence</h3>
+
+    <div id="editEvidenceError" class="auth-error"></div>
+
+    <div class="modal-field">
+      <label>Title</label>
+      <input type="text" id="editEvidenceTitle" value="${evidence.title}">
+    </div>
+
+    <div class="modal-field">
+      <label>Description</label>
+      <input type="text" id="editEvidenceDescription" value="${evidence.description}">
+    </div>
+
+    ${
+      showUrl
+        ? `
+          <div class="modal-field">
+            <label>URL (optional)</label>
+            <input type="text" id="editEvidenceUrl" value="${evidence.url || ""}">
+          </div>
+        `
+        : ""
     }
 
-    const projectOptions =
-      availableProjects
-        .map(
-          (project, index) =>
-            `${index + 1}. ${project.name}`
-        )
-        .join("\n");
+    <div class="modal-actions">
+      <button class="modal-save" id="editEvidenceSave">Save</button>
+      <button class="modal-cancel" id="editEvidenceCancel">Cancel</button>
+    </div>
 
-    const projectChoice =
-      prompt(
-        "Select project:\n\n" +
-        projectOptions
+  `);
+
+  document
+    .getElementById("editEvidenceCancel")
+    .addEventListener("click", closeModal);
+
+  document
+    .getElementById("editEvidenceSave")
+    .addEventListener("click", () => {
+
+      const errorBox =
+        document.getElementById("editEvidenceError");
+
+      const title =
+        document.getElementById("editEvidenceTitle").value.trim();
+
+      if (!title) {
+
+        showModalError(errorBox, "Evidence title cannot be empty.");
+
+        return;
+
+      }
+
+      const description =
+        document.getElementById("editEvidenceDescription").value.trim();
+
+      if (!description) {
+
+        showModalError(errorBox, "Evidence description cannot be empty.");
+
+        return;
+
+      }
+
+      evidence.title = title;
+
+      evidence.description = description;
+
+      if (showUrl) {
+
+        evidence.url =
+          document.getElementById("editEvidenceUrl").value.trim() || null;
+
+      }
+
+      saveData(state);
+
+      closeModal();
+
+      openedSkill = skill.id;
+
+      renderSkills(
+        document.getElementById("app")
       );
 
-    if (projectChoice === null) {
-      return;
-    }
+    });
 
-    const projectIndex =
-      Number(
-        projectChoice.trim()
-      ) - 1;
+}
 
-    const selectedProject =
-      availableProjects[
-        projectIndex
-      ];
 
-    if (!selectedProject) {
+function deleteEvidence(
+  skill,
+  evidence
+) {
 
-      alert(
-        "Invalid project."
+  confirmSimple({
+
+    title: "Delete Evidence",
+
+    message: `Delete evidence "${evidence.title}"?`,
+
+    onConfirm: () => {
+
+      skill.evidence =
+        skill.evidence.filter(
+          e => e.id !== evidence.id
+        );
+
+      saveData(state);
+
+      openedSkill = skill.id;
+
+      renderSkills(
+        document.getElementById("app")
       );
 
-      return;
     }
 
-    projectId =
-      selectedProject.id;
+  });
+
+}
+
+/* =========================================================
+   PROMOTION
+   ========================================================= */
+
+
+function finishPromotion(skill, fromLevel, toLevel) {
+
+  if (!Array.isArray(skill.levelHistory)) {
+
+    skill.levelHistory = [];
+
   }
 
+  skill.level =
+    toLevel;
 
-  /*
-   * OPTIONAL URL
-   */
+  skill.levelHistory.push({
 
-  let url = null;
-
-  if (
-    type === "Link" ||
-    type === "Document" ||
-    type === "Artifact"
-  ) {
-
-    const urlInput =
-      prompt(
-        "URL (optional):"
-      );
-
-    if (urlInput !== null) {
-
-      url =
-        urlInput.trim() ||
-        null;
-    }
-  }
-
-
-  /*
-   * CREATE
-   */
-
-  skill.evidence.push({
-
-    id:
-      crypto.randomUUID(),
-
-    capabilityId:
-      capability.id,
-
-    type:
-      type,
-
-    title:
-      title.trim(),
-
-    description:
-      description.trim(),
-
-    projectId:
-      projectId,
-
-    url:
-      url,
-
-    createdAt:
-      Date.now()
+    id: crypto.randomUUID(),
+    fromLevel: fromLevel,
+    toLevel: toLevel,
+    changedAt: Date.now()
 
   });
 
@@ -3360,126 +3332,7 @@ function addEvidence(
   renderSkills(
     document.getElementById("app")
   );
-}
 
-
-function editEvidence(
-  skill,
-  evidence
-) {
-
-  const title =
-    prompt(
-      "Evidence title:",
-      evidence.title
-    );
-
-  if (title === null) {
-    return;
-  }
-
-  if (!title.trim()) {
-
-    alert(
-      "Evidence title cannot be empty."
-    );
-
-    return;
-  }
-
-
-  const description =
-    prompt(
-      "Evidence description:",
-      evidence.description
-    );
-
-  if (description === null) {
-    return;
-  }
-
-  if (!description.trim()) {
-
-    alert(
-      "Evidence description cannot be empty."
-    );
-
-    return;
-  }
-
-
-  evidence.title =
-    title.trim();
-
-  evidence.description =
-    description.trim();
-
-
-  /*
-   * URL remains editable for URL-based
-   * evidence types.
-   */
-
-  if (
-    evidence.type === "Link" ||
-    evidence.type === "Document" ||
-    evidence.type === "Artifact"
-  ) {
-
-    const url =
-      prompt(
-        "URL (optional):",
-        evidence.url || ""
-      );
-
-    if (url !== null) {
-
-      evidence.url =
-        url.trim() ||
-        null;
-    }
-  }
-
-  saveData(state);
-
-  openedSkill =
-    skill.id;
-
-  renderSkills(
-    document.getElementById("app")
-  );
-}
-
-
-function deleteEvidence(
-  skill,
-  evidence
-) {
-
-  const confirmed =
-    confirm(
-      `Delete evidence "${evidence.title}"?`
-    );
-
-  if (!confirmed) {
-    return;
-  }
-
-  skill.evidence =
-    skill.evidence.filter(
-      existingEvidence =>
-        existingEvidence.id !==
-        evidence.id
-    );
-
-  saveData(state);
-
-  openedSkill =
-    skill.id;
-
-  renderSkills(
-    document.getElementById("app")
-  );
 }
 
 
@@ -3674,7 +3527,7 @@ function getConsistencyDays(
 
 function getStaleLevel(skill) {
 
-  if (skill.status !== "Active") {
+  if (getDisplayStatus(skill) !== "Active") {
     return "none";
   }
 
@@ -3691,12 +3544,16 @@ function getStaleLevel(skill) {
       (1000 * 60 * 60 * 24)
     );
 
-  if (daysSince >= 60) {
+  if (daysSince >= 30) {
     return "red";
   }
 
   if (daysSince >= 14) {
-    return "yellow";
+    return "yellow-strong";
+  }
+
+  if (daysSince >= 7) {
+    return "yellow-soft";
   }
 
   return "none";
@@ -3704,26 +3561,14 @@ function getStaleLevel(skill) {
 }
 
 
-function renderStaleIndicator(skill) {
+function getStaleGlowClass(skill) {
 
   const level =
     getStaleLevel(skill);
 
-  if (level === "none") {
-    return "";
-  }
+  if (level === "none") return "";
 
-  const label =
-    level === "red"
-      ? "Not practiced in 60+ days"
-      : "Not practiced in 14+ days";
-
-  return `
-    <span
-      class="stale-dot stale-${level}"
-      title="${label}"
-    ></span>
-  `;
+  return `stale-glow-${level}`;
 
 }
 

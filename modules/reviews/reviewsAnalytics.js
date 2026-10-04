@@ -19,18 +19,15 @@ export function getPeriodRange(periodType, offset = 0) {
 
   if (periodType === "week") {
 
-    const day = now.getDay();
+    const weekStart =
+      state.settings?.weekStart || "monday";
 
-    const mondayOffset =
-      day === 0 ? -6 : 1 - day;
+    const baseStart =
+      getWeekStartDate(now, weekStart);
 
-    const start = new Date(now);
+    const start = new Date(baseStart);
 
-    start.setDate(
-      now.getDate() + mondayOffset + (offset * 7)
-    );
-
-    start.setHours(0, 0, 0, 0);
+    start.setDate(start.getDate() + (offset * 7));
 
     const end = new Date(start);
 
@@ -133,6 +130,7 @@ export function getSessionsInRange(sessions, range) {
    ========================================================= */
 
 import { state } from "../../core/state.js";
+import { getWeekStartDate } from "../../core/utils.js";
 
 export function getCategoryTotals(sessions) {
 

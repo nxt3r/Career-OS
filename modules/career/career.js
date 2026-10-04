@@ -6,17 +6,27 @@ import {
   getCapabilityProgress
 } from "../skills/skills.js";
 import { getProgress } from "../projects/projects.js";
+import { openModal, closeModal, showModalError, confirmDelete } from "../../core/modal.js";
+import { replayFadeIn } from "../../core/utils.js";
+import { renderLinkChip, attachLinkChipEvents } from "../../core/linkChip.js";
 
 let openedGoal = null;
+let activeGoalTab = {};
 
 
 /* =========================================================
    MAIN CAREER VIEW
    ========================================================= */
 
-export function renderCareer(app) {
+export function renderCareer(app, targetId) {
 
   if (!app) return;
+
+  if (targetId) {
+
+    openedGoal = targetId;
+
+  }
 
   app.innerHTML = `
     <section>
@@ -40,6 +50,8 @@ export function renderCareer(app) {
 
   attachCareerEvents();
 
+  attachLinkChipEvents(app);
+
 }
 
 
@@ -57,12 +69,9 @@ function renderGoalList() {
   if (state.careerGoals.length === 0) {
 
     container.innerHTML = `
-      <div class="card">
-
-        <p>
-          No career goals yet.
-        </p>
-
+      <div class="empty-state">
+        <span class="empty-state-icon">🧭</span>
+        <p>No career goals yet.</p>
       </div>
     `;
 
@@ -73,6 +82,10 @@ function renderGoalList() {
     state.careerGoals
       .map(goal => renderGoalCard(goal))
       .join("");
+
+  replayFadeIn(container);
+
+  attachLinkChipEvents(container);
 
 }
 
@@ -89,7 +102,7 @@ function renderGoalCard(goal) {
     <div class="card career-goal-card">
 
       <div
-        class="career-goal-header"
+        class="career-goal-header ${!expanded ? "career-goal-header-collapsed" : ""}"
         data-id="${goal.id}"
       >
 
@@ -126,97 +139,49 @@ function renderGoalCard(goal) {
 
 function renderExpandedGoal(goal, requiredSkills) {
 
+  const tab =
+    activeGoalTab[goal.id] || "overview";
+
   return `
     <div class="career-goal-body">
 
-      <div class="skill-section">
+      <div class="project-tabs">
 
-        <h4>
-          About
-        </h4>
+        <button
+          class="tab-btn ${tab === "overview" ? "active" : ""}"
+          data-goal="${goal.id}"
+          data-tab="overview"
+        >
+          Overview
+        </button>
 
-        <p>
-          ${
-            goal.description
-              ? escapeHTML(goal.description)
-              : "No description."
-          }
-        </p>
-
-      </div>
-
-            <div class="skill-section">
-
-        <h4>
-          Required Skills
-        </h4>
-
-        ${
-          requiredSkills.length === 0
-            ? `
-              <p>
-                No required skills selected.
-              </p>
-            `
-            : `
-              <ul class="skill-related-projects">
-
-                ${
-                  requiredSkills
-                    .map(skill => `
-                      <li>
-                        <strong>
-                          ${escapeHTML(skill.name)}
-                        </strong>
-                      </li>
-                    `)
-                    .join("")
-                }
-
-              </ul>
-            `
-        }
-
-      </div>
-
-                  <div class="skill-section">
-
-        <h4>
-          Related Projects
-        </h4>
-
-        ${renderRelatedProjects(goal)}
-
-      </div>
-
-      <div class="skill-section">
-
-        <h4>
-          Readiness
-        </h4>
-
-        ${renderReadiness(requiredSkills)}
-
-      </div>
-
-      <div class="skill-section">
-
-        <h4>
+        <button
+          class="tab-btn ${tab === "roadmap" ? "active" : ""}"
+          data-goal="${goal.id}"
+          data-tab="roadmap"
+        >
           Roadmap
-        </h4>
+        </button>
 
-        <div class="project-actions">
-          <button
-            class="add-roadmap-stage"
-            data-goal="${goal.id}"
-          >
-            + Add Stage
-          </button>
-        </div>
-
-        ${renderRoadmap(goal)}
+        <button
+          class="tab-btn ${tab === "readiness" ? "active" : ""}"
+          data-goal="${goal.id}"
+          data-tab="readiness"
+        >
+          Readiness
+        </button>
 
       </div>
+
+      <div class="fade-in" id="goalTabContent-${goal.id}">
+
+        ${renderGoalTab(goal, tab, requiredSkills)}
+
+      </div>
+
+
+      <hr>
+
 
       <div class="career-goal-actions">
 
@@ -242,304 +207,121 @@ function renderExpandedGoal(goal, requiredSkills) {
 }
 
 
-function renderRelatedProjects(goal) {
+function renderGoalTab(goal, tab, requiredSkills) {
 
-  if (
-    !Array.isArray(goal.relatedProjects) ||
-    goal.relatedProjects.length === 0
-  ) {
+  if (tab === "roadmap") {
 
     return `
-      <p>
-        No related projects linked.
-      </p>
+      <div class="skill-section">
+
+        <div class="project-actions">
+          <button
+            class="add-roadmap-stage"
+            data-goal="${goal.id}"
+          >
+            + Add Stage
+          </button>
+        </div>
+
+        ${renderRoadmap(goal)}
+
+      </div>
     `;
 
   }
 
-  const projects =
-    goal.relatedProjects
-      .map(id =>
-        state.projects.find(
-          project => project.id === id
-        )
-      )
-      .filter(Boolean);
 
-  if (projects.length === 0) {
+  if (tab === "readiness") {
 
     return `
-      <p>
-        No related projects linked.
-      </p>
+
+      <div class="skill-section">
+
+        <h4>
+          Readiness
+        </h4>
+
+        ${renderReadiness(requiredSkills)}
+
+      </div>
+
+
+      <div class="skill-section">
+
+        <h4>
+          Related Projects
+        </h4>
+
+        ${renderRelatedProjects(goal)}
+
+      </div>
+
     `;
 
   }
 
-  const usedAsEvidence =
-    getEvidenceProjectIds(
-      getRequiredSkillObjects(goal)
-    );
+
+  /* OVERVIEW (default) */
 
   return `
-    <ul class="skill-related-projects">
-
-      ${
-        projects
-          .map(project => {
-
-            const progress =
-              getProgress(project);
-
-            const isEvidence =
-              usedAsEvidence.has(project.id);
-
-            return `
-              <li>
-
-                <strong>
-                  ${escapeHTML(project.name)}
-                </strong>
-                —
-                ${progress}% complete
-
-                ${
-                  isEvidence
-                    ? `
-                      <br>
-                      <small>
-                        ✓ Also used as evidence
-                      </small>
-                    `
-                    : ""
-                }
-
-              </li>
-            `;
-
-          })
-          .join("")
-      }
-
-    </ul>
-  `;
-
-}
-
-
-function getEvidenceProjectIds(requiredSkills) {
-
-  const ids = new Set();
-
-  requiredSkills.forEach(skill => {
-
-    (skill.evidence || []).forEach(item => {
-
-      if (item.projectId) {
-        ids.add(item.projectId);
-      }
-
-    });
-
-  });
-
-  return ids;
-
-}
-
-
-function renderReadiness(requiredSkills) {
-
-  if (requiredSkills.length === 0) {
-
-    return `
-      <p>
-        No required skills selected.
-      </p>
-    `;
-
-  }
-
-  return `
-    <div class="readiness-list">
-
-      ${
-        requiredSkills
-          .map(skill => renderSkillReadiness(skill))
-          .join("")
-      }
-
-    </div>
 
     <div class="skill-section">
 
       <h4>
-        Evidence
+        About
       </h4>
-
-      ${renderEvidenceRollup(requiredSkills)}
-
-    </div>
-  `;
-
-}
-
-
-function renderSkillReadiness(skill) {
-
-  const currentLevelName =
-    getLevelName(skill.level);
-
-  const targetLevelName =
-    getLevelName(skill.targetLevel);
-
-  const progress =
-    getCapabilityProgress(
-      skill,
-      skill.level
-    );
-
-  const evidenceCount =
-    (skill.evidence || []).length;
-
-  return `
-    <div class="readiness-item">
-
-      <p>
-        <strong>
-          ${escapeHTML(skill.name)}
-        </strong>
-      </p>
-
-      <p>
-        Level:
-        ${currentLevelName}
-        →
-        ${targetLevelName}
-      </p>
 
       <p>
         ${
-          progress.total > 0
-            ? `${progress.demonstrated} / ${progress.total} demonstrated at current level`
-            : "No capabilities defined at current level."
+          goal.description
+            ? escapeHTML(goal.description)
+            : "No description."
         }
       </p>
 
-      <p>
-        Evidence recorded:
-        <strong>
-          ${evidenceCount}
-        </strong>
-      </p>
-
     </div>
-  `;
-
-}
 
 
-function renderEvidenceRollup(requiredSkills) {
+    <div class="skill-section">
 
-  const groups =
-    requiredSkills
-      .map(skill => ({
-        skill,
-        evidence: skill.evidence || []
-      }))
-      .filter(group => group.evidence.length > 0);
-
-  if (groups.length === 0) {
-
-    return `
-      <p>
-        No evidence recorded yet across
-        required skills.
-      </p>
-    `;
-
-  }
-
-  return `
-    <div class="evidence-rollup">
+      <h4>
+        Required Skills
+      </h4>
 
       ${
-        groups
-          .map(group => `
-            <div class="evidence-rollup-group">
+        requiredSkills.length === 0
+          ? `
+            <p>
+              No required skills selected.
+            </p>
+          `
+          : `
+            <ul class="skill-related-projects">
 
-              <p>
-                <strong>
-                  ${escapeHTML(group.skill.name)}
-                </strong>
-              </p>
+              ${
+                requiredSkills
+                  .map(skill => `
+                    <li>
+                      ${renderLinkChip("skill", skill.id, skill.name)}
+                    </li>
+                  `)
+                  .join("")
+              }
 
-                            <ul class="skill-related-projects">
-
-                ${
-                  group.evidence
-                    .map(item => `
-                      <li>
-
-                        <strong>
-                          ${escapeHTML(item.type)}
-                        </strong>
-                        —
-                        ${escapeHTML(item.title)}
-
-                        ${
-                          item.projectId
-                            ? renderEvidenceProjectName(item.projectId)
-                            : ""
-                        }
-
-                        ${
-                          item.url
-                            ? `
-                              <br>
-                              <a
-                                href="${escapeHTML(item.url)}"
-                                target="_blank"
-                                rel="noopener noreferrer"
-                              >
-                                ${escapeHTML(item.url)}
-                              </a>
-                            `
-                            : ""
-                        }
-
-                      </li>
-                    `)
-                    .join("")
-                }
-
-              </ul>
-
-            </div>
-          `)
-          .join("")
+            </ul>
+          `
       }
 
     </div>
+
   `;
 
 }
 
 
-function renderEvidenceProjectName(projectId) {
-
-  const project =
-    state.projects.find(
-      existingProject =>
-        existingProject.id === projectId
-    );
-
-  return project
-    ? ` (Project: ${escapeHTML(project.name)})`
-    : "";
-
-}
-
+/* =========================================================
+   ROADMAP RENDER
+   ========================================================= */
 
 function renderRoadmap(goal) {
 
@@ -604,6 +386,291 @@ function renderRoadmap(goal) {
 
     </ul>
   `;
+
+}
+
+
+/* =========================================================
+   READINESS
+   ========================================================= */
+
+function renderReadiness(requiredSkills) {
+
+  if (requiredSkills.length === 0) {
+
+    return `
+      <p>
+        No required skills selected.
+      </p>
+    `;
+
+  }
+
+  return `
+    <div class="readiness-list">
+
+      ${
+        requiredSkills
+          .map(skill => renderSkillReadiness(skill))
+          .join("")
+      }
+
+    </div>
+
+    <div class="skill-section">
+
+      <h4>
+        Evidence
+      </h4>
+
+      ${renderEvidenceRollup(requiredSkills)}
+
+    </div>
+  `;
+
+}
+
+
+function renderSkillReadiness(skill) {
+
+  const isMastered =
+    skill.level >= skill.targetLevel || skill.level >= 5;
+
+  if (isMastered) {
+
+    return `
+      <div class="readiness-item readiness-mastered">
+        <p><strong>${escapeHTML(skill.name)}</strong></p>
+        <p class="readiness-mastered-badge">🏆 Mastered — ${getLevelName(skill.level)}</p>
+      </div>
+    `;
+
+  }
+
+  const currentLevelName = getLevelName(skill.level);
+  const targetLevelName = getLevelName(skill.targetLevel);
+
+  const progress = getCapabilityProgress(skill, skill.level);
+  const evidenceCount = (skill.evidence || []).length;
+
+  return `
+    <div class="readiness-item">
+      <p><strong>${escapeHTML(skill.name)}</strong></p>
+      <p>Level: ${currentLevelName} → ${targetLevelName}</p>
+      <p>${progress.total > 0 ? `${progress.demonstrated} / ${progress.total} demonstrated at current level` : "No capabilities defined at current level."}</p>
+      <p>Evidence recorded: <strong>${evidenceCount}</strong></p>
+    </div>
+  `;
+
+}
+
+
+function renderEvidenceRollup(requiredSkills) {
+
+  const groups =
+    requiredSkills
+      .map(skill => ({
+        skill,
+        evidence: skill.evidence || []
+      }))
+      .filter(group => group.evidence.length > 0);
+
+  if (groups.length === 0) {
+
+    return `
+      <p>
+        No evidence recorded yet across
+        required skills.
+      </p>
+    `;
+
+  }
+
+  return `
+    <div class="evidence-rollup">
+
+      ${
+        groups
+          .map(group => `
+            <div class="evidence-rollup-group">
+
+              <p>
+                <strong>
+                  ${escapeHTML(group.skill.name)}
+                </strong>
+              </p>
+
+              <ul class="skill-related-projects">
+
+                ${
+                  group.evidence
+                    .map(item => `
+                      <li>
+
+                        <strong>
+                          ${escapeHTML(item.type)}
+                        </strong>
+                        —
+                        ${escapeHTML(item.title)}
+
+                        ${
+                          item.projectId
+                            ? renderEvidenceProjectName(item.projectId)
+                            : ""
+                        }
+
+                        ${
+                          item.url
+                            ? `
+                              <br>
+                              <a
+                                href="${escapeHTML(item.url)}"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                              >
+                                ${escapeHTML(item.url)}
+                              </a>
+                            `
+                            : ""
+                        }
+
+                      </li>
+                    `)
+                    .join("")
+                }
+
+              </ul>
+
+            </div>
+          `)
+          .join("")
+      }
+
+    </div>
+  `;
+
+}
+
+
+function renderEvidenceProjectName(projectId) {
+
+  const project =
+    state.projects.find(
+      existingProject =>
+        existingProject.id === projectId
+    );
+
+  return project
+    ? ` (${renderLinkChip("project", project.id, project.name)})`
+    : "";
+
+}
+
+
+/* =========================================================
+   RELATED PROJECTS (GOAL)
+   ========================================================= */
+
+function renderRelatedProjects(goal) {
+
+  if (
+    !Array.isArray(goal.relatedProjects) ||
+    goal.relatedProjects.length === 0
+  ) {
+
+    return `
+      <p>
+        No related projects linked.
+      </p>
+    `;
+
+  }
+
+  const projects =
+    goal.relatedProjects
+      .map(id =>
+        state.projects.find(
+          project => project.id === id
+        )
+      )
+      .filter(Boolean);
+
+  if (projects.length === 0) {
+
+    return `
+      <p>
+        No related projects linked.
+      </p>
+    `;
+
+  }
+
+  const usedAsEvidence =
+    getEvidenceProjectIds(
+      getRequiredSkillObjects(goal)
+    );
+
+  return `
+    <ul class="skill-related-projects">
+
+      ${
+        projects
+          .map(project => {
+
+            const progress =
+              getProgress(project);
+
+            const isEvidence =
+              usedAsEvidence.has(project.id);
+
+            return `
+              <li>
+
+                ${renderLinkChip("project", project.id, project.name)}
+                —
+                ${progress}% complete
+
+                ${
+                  isEvidence
+                    ? `
+                      <br>
+                      <small>
+                        ✓ Also used as evidence
+                      </small>
+                    `
+                    : ""
+                }
+
+              </li>
+            `;
+
+          })
+          .join("")
+      }
+
+    </ul>
+  `;
+
+}
+
+
+function getEvidenceProjectIds(requiredSkills) {
+
+  const ids = new Set();
+
+  requiredSkills.forEach(skill => {
+
+    (skill.evidence || []).forEach(item => {
+
+      if (item.projectId) {
+        ids.add(item.projectId);
+      }
+
+    });
+
+  });
+
+  return ids;
 
 }
 
@@ -719,6 +786,26 @@ function handleGoalListClick(event) {
 
 
   if (
+    button.classList.contains("tab-btn")
+  ) {
+
+    const goalId =
+      button.dataset.goal;
+
+    const tabName =
+      button.dataset.tab;
+
+    activeGoalTab[goalId] =
+      tabName;
+
+    renderGoalList();
+
+    return;
+
+  }
+
+
+  if (
     button.classList.contains(
       "edit-career-goal"
     )
@@ -728,14 +815,14 @@ function handleGoalListClick(event) {
       findGoal(button.dataset.goal);
 
     if (goal) {
-      editGoal(goal);
+      openEditGoalForm(goal);
     }
 
     return;
   }
 
 
-    if (
+  if (
     button.classList.contains(
       "delete-career-goal"
     )
@@ -821,247 +908,404 @@ function handleGoalListClick(event) {
 
 
 /* =========================================================
-   ADD GOAL
+   ADD / EDIT GOAL — SMART FORM
    ========================================================= */
 
 function openAddGoalForm() {
 
-  const title =
-    prompt(
-      "Career goal title:\n\n" +
-      "e.g. Frontend Developer"
-    );
+  if (state.skills.length === 0) {
 
-  if (
-    title === null ||
-    !title.trim()
-  ) {
-    return;
-  }
+    openModal(`
+      <h3>No Skills Yet</h3>
+      <p>Add skills in the Skills tab first before creating a career goal.</p>
+      <div class="modal-actions">
+        <button class="modal-cancel" id="noSkillsClose">Close</button>
+      </div>
+    `);
 
-  const trimmedTitle =
-    title.trim();
-
-  const titleExists =
-    state.careerGoals.some(
-      goal =>
-        goal.title.toLowerCase() ===
-        trimmedTitle.toLowerCase()
-    );
-
-  if (titleExists) {
-
-    alert(
-      "A career goal with this title already exists."
-    );
+    document
+      .getElementById("noSkillsClose")
+      .addEventListener("click", closeModal);
 
     return;
 
   }
 
-
-  const description =
-    prompt(
-      "Description (optional):"
-    ) || "";
-
-
-  const requiredSkillIds =
-    pickRequiredSkills([]);
-
-  if (requiredSkillIds === null) {
-    return;
-  }
-
-
-  const overlapWarning =
-    getOverlapWarning(
-      requiredSkillIds,
-      null
-    );
-
-  if (overlapWarning) {
-
-    const proceed =
-      confirm(
-        overlapWarning +
-        "\n\nCreate this goal anyway?"
-      );
-
-    if (!proceed) {
-      return;
-    }
-
-  }
-
-
-      const roadmap =
-    buildInitialRoadmap(
-      trimmedTitle,
-      requiredSkillIds
-    );
-
-  const relatedProjects =
-    pickRelatedProjects(
-      [],
-      requiredSkillIds
-    );
-
-  if (relatedProjects === null) return;
-
-  state.careerGoals.push({
-
-    id:
-      crypto.randomUUID(),
-
-    title:
-      trimmedTitle,
-
-    description:
-      description.trim(),
-
-    requiredSkillIds:
-      requiredSkillIds,
-
-    roadmap:
-      roadmap,
-
-    relatedProjects:
-      relatedProjects,
-
-    createdAt:
-      Date.now()
-
-  });
-
-
-  saveData(state);
-
-  openedGoal =
-    state.careerGoals[
-      state.careerGoals.length - 1
-    ].id;
-
-  renderCareer(
-    document.getElementById("app")
-  );
+  renderGoalFormModal({ mode: "add", goal: null });
 
 }
 
 
-/* =========================================================
-   EDIT GOAL
-   ========================================================= */
+function openEditGoalForm(goal) {
 
-function editGoal(goal) {
+  renderGoalFormModal({ mode: "edit", goal });
 
-  const title =
-    prompt(
-      "Career goal title:",
-      goal.title
-    );
-
-  if (title === null) return;
-
-  if (!title.trim()) {
-
-    alert(
-      "Title cannot be empty."
-    );
-
-    return;
-  }
-
-  const trimmedTitle =
-    title.trim();
-
-  const titleExists =
-    state.careerGoals.some(
-      existingGoal =>
-        existingGoal.id !== goal.id &&
-        existingGoal.title.toLowerCase() ===
-        trimmedTitle.toLowerCase()
-    );
-
-  if (titleExists) {
-
-    alert(
-      "A career goal with this title already exists."
-    );
-
-    return;
-
-  }
+}
 
 
-  const description =
-    prompt(
-      "Description (optional):",
-      goal.description || ""
-    );
+function renderGoalFormModal({ mode, goal }) {
 
-  if (description === null) return;
+  const activeProjects =
+    state.projects.filter(p => !p.archived);
 
+  const skillCheckboxes =
+    state.skills
+      .map(skill => `
+        <label class="modal-checkbox-row">
+          <input
+            type="checkbox"
+            value="${skill.id}"
+            class="goal-skill-checkbox"
+            ${goal && goal.requiredSkillIds.includes(skill.id) ? "checked" : ""}
+          >
+          ${escapeHTML(skill.name)}
+        </label>
+      `)
+      .join("");
 
-    const requiredSkillIds =
-    pickRequiredSkills(
-      goal.requiredSkillIds
-    );
+  const projectCheckboxes =
+    activeProjects
+      .map(project => `
+        <label class="modal-checkbox-row">
+          <input
+            type="checkbox"
+            value="${project.id}"
+            class="goal-project-checkbox"
+            ${goal && goal.relatedProjects.includes(project.id) ? "checked" : ""}
+          >
+          ${escapeHTML(project.name)}
+        </label>
+      `)
+      .join("");
 
-  if (requiredSkillIds === null) return;
+  openModal(`
 
+    <h3>${mode === "add" ? "New Career Goal" : "Edit Career Goal"}</h3>
 
-  const overlapWarning =
-    getOverlapWarning(
-      requiredSkillIds,
-      goal.id
-    );
+    <div id="goalFormError" class="auth-error"></div>
 
-  if (overlapWarning) {
+    <div class="modal-field">
+      <label>Title</label>
+      <input
+        type="text"
+        id="goalTitleInput"
+        value="${goal ? escapeHTML(goal.title) : ""}"
+        placeholder="e.g. Frontend Developer"
+      >
+    </div>
 
-    const proceed =
-      confirm(
-        overlapWarning +
-        "\n\nSave anyway?"
-      );
+    <div class="modal-field">
+      <label>Description (optional)</label>
+      <textarea id="goalDescriptionInput">${goal ? escapeHTML(goal.description || "") : ""}</textarea>
+    </div>
 
-    if (!proceed) {
-      return;
+    <div class="modal-field">
+      <label>Required Skills</label>
+      <div class="modal-checkbox-list">${skillCheckboxes}</div>
+      <div id="overlapWarningBox" class="overlap-warning"></div>
+    </div>
+
+    ${
+      activeProjects.length > 0
+        ? `
+          <div class="modal-field">
+            <label>Related Projects (optional — auto-suggested from required skills)</label>
+            <div class="modal-checkbox-list">${projectCheckboxes}</div>
+          </div>
+        `
+        : ""
     }
 
+    <div class="modal-actions">
+      <button class="modal-save" id="goalFormSave">${mode === "add" ? "Create Goal" : "Save"}</button>
+      <button class="modal-cancel" id="goalFormCancel">Cancel</button>
+    </div>
+
+  `);
+
+  document
+    .getElementById("goalFormCancel")
+    .addEventListener("click", closeModal);
+
+  let overlapAcknowledged = false;
+
+  function recomputeOverlap() {
+
+    const checkedSkillIds =
+      Array.from(
+        document.querySelectorAll(".goal-skill-checkbox:checked")
+      ).map(c => c.value);
+
+    const warning =
+      getOverlapWarning(
+        checkedSkillIds,
+        goal ? goal.id : null
+      );
+
+    document.getElementById("overlapWarningBox").textContent =
+      warning || "";
+
+    overlapAcknowledged = false;
+
+    document.getElementById("goalFormSave").textContent =
+      mode === "add" ? "Create Goal" : "Save";
+
   }
 
+  function recomputeProjectSuggestions() {
 
-  const relatedProjects =
-    pickRelatedProjects(
-      goal.relatedProjects,
-      requiredSkillIds
-    );
+    const checkedSkillIds =
+      Array.from(
+        document.querySelectorAll(".goal-skill-checkbox:checked")
+      ).map(c => c.value);
 
-  if (relatedProjects === null) return;
+    const suggested = new Set();
+
+    checkedSkillIds.forEach(skillId => {
+
+      const skill =
+        state.skills.find(s => s.id === skillId);
+
+      if (skill && Array.isArray(skill.relatedProjects)) {
+
+        skill.relatedProjects.forEach(pid => suggested.add(pid));
+
+      }
+
+    });
+
+    document
+      .querySelectorAll(".goal-project-checkbox")
+      .forEach(checkbox => {
+
+        if (checkbox.dataset.touched !== "true") {
+
+          checkbox.checked = suggested.has(checkbox.value);
+
+        }
+
+      });
+
+  }
+
+  document
+    .querySelectorAll(".goal-skill-checkbox")
+    .forEach(checkbox => {
+
+      checkbox.addEventListener("change", () => {
+
+        recomputeOverlap();
+
+        recomputeProjectSuggestions();
+
+      });
+
+    });
+
+  document
+    .querySelectorAll(".goal-project-checkbox")
+    .forEach(checkbox => {
+
+      checkbox.addEventListener("change", () => {
+
+        checkbox.dataset.touched = "true";
+
+      });
+
+    });
+
+  if (mode === "edit") {
+
+    recomputeOverlap();
+
+  }
+
+  document
+    .getElementById("goalFormSave")
+    .addEventListener("click", () => {
+
+      const errorBox =
+        document.getElementById("goalFormError");
+
+      const title =
+        document.getElementById("goalTitleInput").value.trim();
+
+      if (!title) {
+
+        showModalError(errorBox, "Title cannot be empty.");
+
+        return;
+
+      }
+
+      const titleExists =
+        state.careerGoals.some(g =>
+          (!goal || g.id !== goal.id) &&
+          g.title.toLowerCase() === title.toLowerCase()
+        );
+
+      if (titleExists) {
+
+        showModalError(errorBox, "A career goal with this title already exists.");
+
+        return;
+
+      }
+
+      const description =
+        document.getElementById("goalDescriptionInput").value.trim();
+
+      const requiredSkillIds =
+        Array.from(
+          document.querySelectorAll(".goal-skill-checkbox:checked")
+        ).map(c => c.value);
+
+      const relatedProjects =
+        Array.from(
+          document.querySelectorAll(".goal-project-checkbox:checked")
+        ).map(c => c.value);
+
+      const overlapWarning =
+        getOverlapWarning(requiredSkillIds, goal ? goal.id : null);
+
+      if (overlapWarning && !overlapAcknowledged) {
+
+        showModalError(errorBox, overlapWarning + " Click again to continue anyway.");
+
+        overlapAcknowledged = true;
+
+        document.getElementById("goalFormSave").textContent =
+          mode === "add" ? "Create Anyway" : "Save Anyway";
+
+        return;
+
+      }
+
+      if (mode === "add") {
+
+        const suggestion =
+          getRoadmapSuggestion(title, requiredSkillIds);
+
+        closeModal();
+
+        if (suggestion) {
+
+          showRoadmapSuggestionModal(suggestion, roadmap => {
+
+            finalizeCreateGoal(
+              title,
+              description,
+              requiredSkillIds,
+              relatedProjects,
+              roadmap
+            );
+
+          });
+
+        } else {
+
+          finalizeCreateGoal(
+            title,
+            description,
+            requiredSkillIds,
+            relatedProjects,
+            []
+          );
+
+        }
+
+      } else {
+
+        goal.title = title;
+        goal.description = description;
+        goal.requiredSkillIds = requiredSkillIds;
+        goal.relatedProjects = relatedProjects;
+
+        saveData(state);
+
+        closeModal();
+
+        openedGoal = goal.id;
+
+        renderCareer(document.getElementById("app"));
+
+      }
+
+    });
+
+}
 
 
-  goal.title =
-    trimmedTitle;
+function finalizeCreateGoal(title, description, requiredSkillIds, relatedProjects, roadmap) {
 
-  goal.description =
-    description.trim();
+  state.careerGoals.push({
 
-  goal.requiredSkillIds =
-    requiredSkillIds;
+    id: crypto.randomUUID(),
+    title,
+    description,
+    requiredSkillIds,
+    relatedProjects,
+    roadmap,
+    createdAt: Date.now()
 
-  goal.relatedProjects =
-    relatedProjects;
-
+  });
 
   saveData(state);
 
   openedGoal =
-    goal.id;
+    state.careerGoals[state.careerGoals.length - 1].id;
 
-  renderCareer(
-    document.getElementById("app")
-  );
+  renderCareer(document.getElementById("app"));
+
+}
+
+
+function showRoadmapSuggestionModal(suggestion, onChoice) {
+
+  const sourceLabel =
+    suggestion.source === "template"
+      ? "a saved roadmap template"
+      : "your required skills' levels";
+
+  const preview =
+    suggestion.suggestedTitles
+      .map((t, i) => `<li>${escapeHTML(t)}</li>`)
+      .join("");
+
+  openModal(`
+
+    <h3>Suggested Roadmap</h3>
+
+    <p>Based on ${sourceLabel}:</p>
+
+    <ol class="modal-suggested-list">${preview}</ol>
+
+    <div class="modal-actions">
+      <button class="modal-save" id="useRoadmapSuggestion">Use This Roadmap</button>
+      <button class="modal-cancel" id="skipRoadmapSuggestion">Start Blank</button>
+    </div>
+
+  `);
+
+  document
+    .getElementById("skipRoadmapSuggestion")
+    .addEventListener("click", () => {
+
+      closeModal();
+
+      onChoice([]);
+
+    });
+
+  document
+    .getElementById("useRoadmapSuggestion")
+    .addEventListener("click", () => {
+
+      closeModal();
+
+      onChoice(buildRoadmapFromTitles(suggestion.suggestedTitles));
+
+    });
 
 }
 
@@ -1072,222 +1316,30 @@ function editGoal(goal) {
 
 function deleteGoal(goal) {
 
-  const confirmation =
-    prompt(
-      `Delete career goal "${goal.title}"?\n\n` +
-      "This will permanently remove this goal " +
-      "and its roadmap.\n\n" +
-      "Type the exact goal title to confirm:"
-    );
+  confirmDelete({
 
-  if (confirmation === null) {
-    return;
-  }
+    title: "Delete Career Goal",
 
-  if (confirmation !== goal.title) {
+    message: `This permanently removes "${goal.title}" and its roadmap.`,
 
-    alert(
-      "Goal title does not match.\n\n" +
-      "The goal was NOT deleted."
-    );
+    confirmText: goal.title,
 
-    return;
-  }
+    onConfirm: () => {
 
-  state.careerGoals =
-    state.careerGoals.filter(
-      existingGoal =>
-        existingGoal.id !== goal.id
-    );
+      state.careerGoals =
+        state.careerGoals.filter(
+          existingGoal => existingGoal.id !== goal.id
+        );
 
-  saveData(state);
+      saveData(state);
 
-  openedGoal = null;
+      openedGoal = null;
 
-  renderCareer(
-    document.getElementById("app")
-  );
-
-}
-
-
-/* =========================================================
-   REQUIRED SKILLS PICKER
-   ========================================================= */
-
-function pickRequiredSkills(currentIds) {
-
-  if (state.skills.length === 0) {
-
-    alert(
-      "No skills exist yet.\n\n" +
-      "Add skills in the Skills tab first."
-    );
-
-    return null;
-
-  }
-
-  const options =
-    state.skills
-      .map(
-        (skill, index) =>
-          `${index + 1}. ${skill.name}`
-      )
-      .join("\n");
-
-  const defaultValue =
-    currentIds
-      .map(id =>
-        state.skills.findIndex(
-          skill => skill.id === id
-        ) + 1
-      )
-      .filter(index => index > 0)
-      .join(", ");
-
-  const choice =
-    prompt(
-      "Required skills:\n\n" +
-      options +
-      "\n\nEnter numbers separated by commas:",
-      defaultValue
-    );
-
-  if (choice === null) return null;
-
-  if (!choice.trim()) return [];
-
-  const ids = [];
-
-  choice
-    .split(",")
-    .map(value => Number(value.trim()) - 1)
-    .forEach(index => {
-
-      const skill =
-        state.skills[index];
-
-      if (
-        skill &&
-        !ids.includes(skill.id)
-      ) {
-
-        ids.push(skill.id);
-
-      }
-
-    });
-
-  return ids;
-
-}
-
-
-/* =========================================================
-   RELATED PROJECTS PICKER
-   ========================================================= */
-
-function pickRelatedProjects(currentIds, requiredSkillIds) {
-
-  const availableProjects =
-    state.projects.filter(
-      project => !project.archived
-    );
-
-  if (availableProjects.length === 0) {
-
-    return currentIds;
-
-  }
-
-  /*
-   * AUTO-SUGGEST
-   *
-   * Pull projects already linked to the
-   * required skills as candidates. This is
-   * a suggestion only — fully editable,
-   * never forced.
-   */
-
-  const suggestedIds = new Set(currentIds);
-
-  requiredSkillIds.forEach(skillId => {
-
-    const skill =
-      state.skills.find(
-        existingSkill =>
-          existingSkill.id === skillId
-      );
-
-    if (
-      skill &&
-      Array.isArray(skill.relatedProjects)
-    ) {
-
-      skill.relatedProjects.forEach(
-        projectId => suggestedIds.add(projectId)
-      );
+      renderCareer(document.getElementById("app"));
 
     }
 
   });
-
-  const options =
-    availableProjects
-      .map(
-        (project, index) =>
-          `${index + 1}. ${project.name}`
-      )
-      .join("\n");
-
-  const defaultValue =
-    [...suggestedIds]
-      .map(id =>
-        availableProjects.findIndex(
-          project => project.id === id
-        ) + 1
-      )
-      .filter(index => index > 0)
-      .join(", ");
-
-  const choice =
-    prompt(
-      "Related projects (optional).\n\n" +
-      "Pre-filled suggestions are based on your " +
-      "required skills' related projects.\n\n" +
-      options +
-      "\n\nEnter numbers separated by commas, " +
-      "or leave blank for none:",
-      defaultValue
-    );
-
-  if (choice === null) return null;
-
-  if (!choice.trim()) return [];
-
-  const ids = [];
-
-  choice
-    .split(",")
-    .map(value => Number(value.trim()) - 1)
-    .forEach(index => {
-
-      const project =
-        availableProjects[index];
-
-      if (
-        project &&
-        !ids.includes(project.id)
-      ) {
-
-        ids.push(project.id);
-
-      }
-
-    });
-
-  return ids;
 
 }
 
@@ -1296,10 +1348,7 @@ function pickRelatedProjects(currentIds, requiredSkillIds) {
    OVERLAP WARNING
    ========================================================= */
 
-function getOverlapWarning(
-  requiredSkillIds,
-  excludeGoalId
-) {
+function getOverlapWarning(requiredSkillIds, excludeGoalId) {
 
   if (requiredSkillIds.length === 0) {
     return null;
@@ -1307,8 +1356,7 @@ function getOverlapWarning(
 
   const otherGoals =
     state.careerGoals.filter(
-      goal =>
-        goal.id !== excludeGoalId
+      goal => goal.id !== excludeGoalId
     );
 
   for (const goal of otherGoals) {
@@ -1323,16 +1371,14 @@ function getOverlapWarning(
       );
 
     const overlapPercent =
-      shared.length /
-      requiredSkillIds.length;
+      shared.length / requiredSkillIds.length;
 
     if (overlapPercent >= 0.7) {
 
       return (
         `This overlaps heavily with your existing goal ` +
         `"${goal.title}" (${Math.round(overlapPercent * 100)}% ` +
-        `shared required skills).\n\n` +
-        `Are you sure this is a distinct direction?`
+        `shared required skills).`
       );
 
     }
@@ -1345,164 +1391,10 @@ function getOverlapWarning(
 
 
 /* =========================================================
-   ROADMAP STAGE MANAGEMENT
-   ========================================================= */
-
-function addRoadmapStage(goal) {
-
-  const title =
-    prompt(
-      "Roadmap stage:"
-    );
-
-  if (title === null) return;
-
-  if (!title.trim()) {
-
-    alert(
-      "Stage cannot be empty."
-    );
-
-    return;
-  }
-
-  const trimmedTitle =
-    title.trim();
-
-  const titleExists =
-    goal.roadmap.some(
-      stage =>
-        stage.title.toLowerCase() ===
-        trimmedTitle.toLowerCase()
-    );
-
-  if (titleExists) {
-
-    alert(
-      "A roadmap stage with this name already exists " +
-      "on this goal."
-    );
-
-    return;
-
-  }
-
-  goal.roadmap.push({
-
-    id:
-      crypto.randomUUID(),
-
-    title:
-      trimmedTitle,
-
-    order:
-      goal.roadmap.length + 1,
-
-    done:
-      false
-
-  });
-
-  saveData(state);
-
-  openedGoal =
-    goal.id;
-
-  renderCareer(
-    document.getElementById("app")
-  );
-
-}
-
-
-function editRoadmapStage(goal, stage) {
-
-  const title =
-    prompt(
-      "Roadmap stage:",
-      stage.title
-    );
-
-  if (title === null) return;
-
-  if (!title.trim()) {
-
-    alert(
-      "Stage cannot be empty."
-    );
-
-    return;
-  }
-
-  const trimmedTitle =
-    title.trim();
-
-  const titleExists =
-    goal.roadmap.some(
-      existingStage =>
-        existingStage.id !== stage.id &&
-        existingStage.title.toLowerCase() ===
-        trimmedTitle.toLowerCase()
-    );
-
-  if (titleExists) {
-
-    alert(
-      "A roadmap stage with this name already exists " +
-      "on this goal."
-    );
-
-    return;
-
-  }
-
-  stage.title =
-    trimmedTitle;
-
-  saveData(state);
-
-  openedGoal =
-    goal.id;
-
-  renderCareer(
-    document.getElementById("app")
-  );
-
-}
-
-
-function deleteRoadmapStage(goal, stage) {
-
-  const confirmed =
-    confirm(
-      `Delete stage "${stage.title}"?`
-    );
-
-  if (!confirmed) return;
-
-  goal.roadmap =
-    goal.roadmap.filter(
-      existingStage =>
-        existingStage.id !== stage.id
-    );
-
-  saveData(state);
-
-  openedGoal =
-    goal.id;
-
-  renderCareer(
-    document.getElementById("app")
-  );
-
-}
-
-
-/* =========================================================
    ROADMAP SUGGESTION
    ========================================================= */
 
-function buildInitialRoadmap(title, requiredSkillIds) {
+function getRoadmapSuggestion(title, requiredSkillIds) {
 
   const template =
     roadmapTemplates[title];
@@ -1522,62 +1414,31 @@ function buildInitialRoadmap(title, requiredSkillIds) {
   } else if (requiredSkillIds.length > 0) {
 
     suggestedTitles =
-      deriveStagesFromSkills(
-        requiredSkillIds
-      );
+      deriveStagesFromSkills(requiredSkillIds);
 
     source = "derived";
 
   }
 
   if (suggestedTitles.length === 0) {
-
-    return [];
-
+    return null;
   }
 
-  const preview =
-    suggestedTitles
-      .map(
-        (stageTitle, index) =>
-          `${index + 1}. ${stageTitle}`
-      )
-      .join("\n");
+  return { suggestedTitles, source };
 
-  const sourceLabel =
-    source === "template"
-      ? "a saved roadmap template"
-      : "your required skills' levels";
+}
 
-  const useSuggestion =
-    confirm(
-      `Suggested roadmap (from ${sourceLabel}):\n\n` +
-      preview +
-      "\n\nUse this roadmap? " +
-      "(You can edit it afterward.)\n\n" +
-      "Cancel to start with an empty roadmap instead."
-    );
 
-  if (!useSuggestion) {
+function buildRoadmapFromTitles(titles) {
 
-    return [];
-
-  }
-
-  return suggestedTitles.map(
+  return titles.map(
     (stageTitle, index) => ({
 
-      id:
-        crypto.randomUUID(),
-
-      title:
-        stageTitle,
-
-      order:
-        index + 1,
-
-      done:
-        false
+      id: crypto.randomUUID(),
+      title: stageTitle,
+      order: index + 1,
+      done: false,
+      completedAt: null
 
     })
   );
@@ -1603,10 +1464,8 @@ function deriveStagesFromSkills(requiredSkillIds) {
       skill.targetLevel ||
       skill.level;
 
-        const levelName =
-      getLevelName(
-        targetLevel
-      );
+    const levelName =
+      getLevelName(targetLevel);
 
     stages.push(
       `Reach ${levelName} in ${skill.name}`
@@ -1618,6 +1477,203 @@ function deriveStagesFromSkills(requiredSkillIds) {
 
 }
 
+
+/* =========================================================
+   ROADMAP STAGE MANAGEMENT
+   ========================================================= */
+
+function addRoadmapStage(goal) {
+
+  openModal(`
+
+    <h3>Add Roadmap Stage</h3>
+
+    <div id="addStageError" class="auth-error"></div>
+
+    <div class="modal-field">
+      <label>Stage name</label>
+      <input type="text" id="addStageInput">
+    </div>
+
+    <div class="modal-actions">
+      <button class="modal-save" id="addStageSave">Add</button>
+      <button class="modal-cancel" id="addStageCancel">Cancel</button>
+    </div>
+
+  `);
+
+  document
+    .getElementById("addStageCancel")
+    .addEventListener("click", closeModal);
+
+  document
+    .getElementById("addStageSave")
+    .addEventListener("click", () => {
+
+      const errorBox =
+        document.getElementById("addStageError");
+
+      const trimmedTitle =
+        document.getElementById("addStageInput").value.trim();
+
+      if (!trimmedTitle) {
+
+        showModalError(errorBox, "Stage cannot be empty.");
+
+        return;
+
+      }
+
+      const titleExists =
+        goal.roadmap.some(
+          stage =>
+            stage.title.toLowerCase() ===
+            trimmedTitle.toLowerCase()
+        );
+
+      if (titleExists) {
+
+        showModalError(errorBox, "A roadmap stage with this name already exists.");
+
+        return;
+
+      }
+
+      goal.roadmap.push({
+
+        id: crypto.randomUUID(),
+        title: trimmedTitle,
+        order: goal.roadmap.length + 1,
+        done: false,
+        completedAt: null
+
+      });
+
+      saveData(state);
+
+      closeModal();
+
+      openedGoal = goal.id;
+
+      renderCareer(document.getElementById("app"));
+
+    });
+
+}
+
+
+function editRoadmapStage(goal, stage) {
+
+  openModal(`
+
+    <h3>Edit Roadmap Stage</h3>
+
+    <div id="editStageError" class="auth-error"></div>
+
+    <div class="modal-field">
+      <label>Stage name</label>
+      <input type="text" id="editStageInput" value="${stage.title}">
+    </div>
+
+    <div class="modal-actions">
+      <button class="modal-save" id="editStageSave">Save</button>
+      <button class="modal-cancel" id="editStageCancel">Cancel</button>
+    </div>
+
+  `);
+
+  document
+    .getElementById("editStageCancel")
+    .addEventListener("click", closeModal);
+
+  document
+    .getElementById("editStageSave")
+    .addEventListener("click", () => {
+
+      const errorBox =
+        document.getElementById("editStageError");
+
+      const trimmedTitle =
+        document.getElementById("editStageInput").value.trim();
+
+      if (!trimmedTitle) {
+
+        showModalError(errorBox, "Stage cannot be empty.");
+
+        return;
+
+      }
+
+      const titleExists =
+        goal.roadmap.some(
+          existingStage =>
+            existingStage.id !== stage.id &&
+            existingStage.title.toLowerCase() ===
+            trimmedTitle.toLowerCase()
+        );
+
+      if (titleExists) {
+
+        showModalError(errorBox, "A roadmap stage with this name already exists.");
+
+        return;
+
+      }
+
+      stage.title = trimmedTitle;
+
+      saveData(state);
+
+      closeModal();
+
+      openedGoal = goal.id;
+
+      renderCareer(document.getElementById("app"));
+
+    });
+
+}
+
+
+function deleteRoadmapStage(goal, stage) {
+
+  openModal(`
+
+    <h3>Delete Stage</h3>
+
+    <p>Delete "${escapeHTML(stage.title)}"?</p>
+
+    <div class="modal-actions">
+      <button class="modal-danger" id="deleteStageSave">Delete</button>
+      <button class="modal-cancel" id="deleteStageCancel">Cancel</button>
+    </div>
+
+  `);
+
+  document
+    .getElementById("deleteStageCancel")
+    .addEventListener("click", closeModal);
+
+  document
+    .getElementById("deleteStageSave")
+    .addEventListener("click", () => {
+
+      closeModal();
+
+      goal.roadmap =
+        goal.roadmap.filter(
+          existingStage => existingStage.id !== stage.id
+        );
+
+      saveData(state);
+
+      openedGoal = goal.id;
+
+      renderCareer(document.getElementById("app"));
+
+    });
+
+}
 
 
 /* =========================================================
@@ -1648,7 +1704,7 @@ function findGoal(goalId) {
 
 function escapeHTML(value) {
 
-  return String(value)
+  return String(value ?? "")
     .replaceAll("&", "&amp;")
     .replaceAll("<", "&lt;")
     .replaceAll(">", "&gt;")

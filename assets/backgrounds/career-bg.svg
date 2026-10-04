@@ -1,0 +1,21 @@
+<svg width="1200" height="800" viewBox="0 0 1200 800" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <radialGradient id="fade" cx="50%" cy="20%" r="80%">
+      <stop offset="0%" stop-color="#F59E0B" stop-opacity="0.15"/>
+      <stop offset="100%" stop-color="#F59E0B" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect width="1200" height="800" fill="url(#fade)"/>
+  <g stroke="#F59E0B" stroke-width="1.5" fill="none" opacity="0.25">
+    <polyline points="150,650 350,500 500,560 700,350 850,400 1050,180"/>
+  </g>
+  <g fill="#F59E0B" opacity="0.3">
+    <circle cx="350" cy="500" r="4"/>
+    <circle cx="700" cy="350" r="4"/>
+    <circle cx="1050" cy="180" r="6"/>
+  </g>
+  <g stroke="#F59E0B" stroke-width="1" opacity="0.2">
+    <line x1="1050" y1="180" x2="1050" y2="120"/>
+    <path d="M1050,120 L1080,145 L1050,145 Z" fill="#F59E0B" opacity="0.25"/>
+  </g>
+</svg>

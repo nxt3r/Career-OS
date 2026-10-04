@@ -1,4 +1,5 @@
 import { state } from "../../core/state.js";
+import { replayFadeIn } from "../../core/utils.js";
 import {
   getPeriodRange,
   getPreviousPeriodRange,
@@ -338,7 +339,9 @@ function renderContent() {
 
   `;
 
-    renderCharts(
+  replayFadeIn(container);
+
+  renderCharts(
     categoryTotals,
     trend,
     projectTotals,
@@ -636,6 +639,12 @@ function renderCharts(
     const categories =
       Object.keys(comparison.current);
 
+    const categoryColors =
+      getCategoryColors(categories);
+
+    const categoryGroupColors =
+      categories.map(name => getGroupColor(name));
+
     charts.comparison = new Chart(
       comparisonCanvas,
       {
@@ -649,7 +658,7 @@ function renderCharts(
                 categories.map(category =>
                   +(comparison.current[category] / 3600000).toFixed(2)
                 ),
-              backgroundColor: "#3B82F6"
+              backgroundColor: categoryGroupColors
             },
             {
               label: "Previous Period",
@@ -657,7 +666,7 @@ function renderCharts(
                 categories.map(category =>
                   +(comparison.previous[category] / 3600000).toFixed(2)
                 ),
-              backgroundColor: "#64748B"
+              backgroundColor: categoryGroupColors.map(color => fadeColor(color, 0.4))
             }
           ]
         },
@@ -798,6 +807,32 @@ function getCategoryColors(categoryNames) {
     return hashNameToColor(name);
 
   });
+
+}
+
+
+function getGroupColor(categoryName) {
+
+  const categoryObj =
+    state.categories.find(c => c.name === categoryName);
+
+  const group =
+    categoryObj?.group || "Neutral";
+
+  if (group === "Focus") return "#3B82F6";
+  if (group === "Distraction") return "#EF4444";
+  return "#22C55E";
+
+}
+
+
+function fadeColor(hex, alpha) {
+
+  const r = parseInt(hex.slice(1, 3), 16);
+  const g = parseInt(hex.slice(3, 5), 16);
+  const b = parseInt(hex.slice(5, 7), 16);
+
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
 
 }
 

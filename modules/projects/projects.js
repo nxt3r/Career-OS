@@ -1,5 +1,8 @@
 import { state } from "../../core/state.js";
 import { saveData } from "../../core/storage.js";
+import { openModal, closeModal, showModalError, confirmDelete, confirmSimple } from "../../core/modal.js";
+import { replayFadeIn } from "../../core/utils.js";
+import { renderLinkChip, attachLinkChipEvents } from "../../core/linkChip.js";
 
 let openedProject = null;
 let projectFilter = "All";
@@ -10,7 +13,13 @@ let activeProjectTab = {};
  * PROJECT LAB
  */
 
-export function renderProjects(app) {
+export function renderProjects(app, targetId) {
+
+  if (targetId) {
+
+    openedProject = targetId;
+
+  }
 
   /*
    * DEVELOPMENT MIGRATION
@@ -199,52 +208,56 @@ function renderList() {
   if (visibleProjects.length === 0) {
 
     container.innerHTML = `
-      <div class="project-empty">
-
-        <p>
-          No projects in this section.
-        </p>
-
+      <div class="empty-state">
+        <p>No projects yet.</p>
       </div>
     `;
 
-    return;
+    /*
+     * IMPORTANT:
+     * The empty state used to return before
+     * the New Project button event was attached.
+     */
 
+    attachProjectManagementEvents();
+
+    return;
   }
 
 
   /*
-   * PROJECT CARDS
+   * RENDER PROJECTS
    */
 
   container.innerHTML =
     visibleProjects
       .map(project => {
 
-        const hours =
-          getProjectHours(project.id);
+        const milestones =
+          project.milestones || [];
+
+        const completedMilestones =
+          milestones.filter(
+            milestone => milestone.done
+          ).length;
 
         const progress =
-          getProgress(project);
-
-        const expanded =
-          openedProject === project.id;
-
+          milestones.length === 0
+            ? 0
+            : Math.round(
+                (completedMilestones /
+                  milestones.length) *
+                  100
+              );
 
         return `
           <div
-            class="
-              project-card
-              ${
-                project.archived
-                  ? "archived-project"
-                  : ""
-              }
-            "
+            class="project-card ${
+              openedProject === project.id
+                ? "open"
+                : ""
+            }"
           >
-
-
-            <!-- PROJECT HEADER -->
 
             <div
               class="project-header"
@@ -252,104 +265,86 @@ function renderList() {
             >
 
               <div>
-
                 <h3>
-                  ${project.name}
+                  ${escapeHTML(project.name)}
                 </h3>
 
-
-                <small>
-                  ${hours.toFixed(1)}h logged
-                </small>
-
-
-                <!-- MINI PROGRESS -->
-
-                <div
-                  class="project-mini-progress"
-                >
-
-                  <div
-                    class="project-mini-progress-bar"
-                  >
-
-                    <div
-                      class="project-mini-progress-fill"
-                      style="
-                        width:${progress}%
-                      "
-                    ></div>
-
-                  </div>
-
-
-                  <small>
-                    ${progress}% complete
-                  </small>
-
-                </div>
-
+                <span class="status ${project.archived ? "archived" : project.status.toLowerCase()}">
+                  ${project.archived ? "Archived" : escapeHTML(project.status)}
+                </span>
               </div>
 
-
-              <div class="project-right">
-
-                <span
-                  class="
-                    status
-                    ${project.status.toLowerCase()}
-                  "
-                >
-                  ${project.status}
-                </span>
-
-
-                ${
-                  project.archived
-                    ? `
-                      <span
-                        class="archived-label"
-                      >
-                        Archived
-                      </span>
-                    `
-                    : ""
-                }
-
-
-                <span
-                  class="expand-icon"
-                >
-                  ${
-                    expanded
-                      ? "−"
-                      : "+"
-                  }
-                </span>
-
-              </div>
+              <span>
+                ${progress}%
+              </span>
 
             </div>
 
 
-            <!-- EXPANDED BODY -->
-
             ${
-              expanded
+              openedProject === project.id
                 ? `
-                  <div
-                    class="project-body"
-                  >
+
+                  <div class="project-body">
+
+                    <div class="project-tabs">
+
+                      <button
+                        class="tab-btn ${
+                          (activeProjectTab[project.id] || "overview") ===
+                          "overview"
+                            ? "active"
+                            : ""
+                        }"
+                        data-project="${project.id}"
+                        data-tab="overview"
+                      >
+                        Overview
+                      </button>
+
+                      <button
+                        class="tab-btn ${
+                          activeProjectTab[project.id] === "tasks"
+                            ? "active"
+                            : ""
+                        }"
+                        data-project="${project.id}"
+                        data-tab="tasks"
+                      >
+                        Tasks
+                      </button>
+
+                      <button
+                        class="tab-btn ${
+                          activeProjectTab[project.id] === "inbox"
+                            ? "active"
+                            : ""
+                        }"
+                        data-project="${project.id}"
+                        data-tab="inbox"
+                      >
+                        Inbox
+                      </button>
+
+                      <button
+                        class="tab-btn ${
+                          activeProjectTab[project.id] === "milestones"
+                            ? "active"
+                            : ""
+                        }"
+                        data-project="${project.id}"
+                        data-tab="milestones"
+                      >
+                        Milestones
+                      </button>
+
+                    </div>
 
 
-                    <!-- DESCRIPTION -->
+                    ${renderProjectTab(project, progress)}
 
-                    <p>
-                      ${
-                        project.description ||
-                        "No description."
-                      }
-                    </p>
+
+                    <hr>
 
 
                     <!-- PROJECT MANAGEMENT -->
@@ -370,13 +365,8 @@ function renderList() {
                               Status:
                             </strong>
 
-                            <span
-                              class="
-                                status
-                                ${project.status.toLowerCase()}
-                              "
-                            >
-                              ${project.status}
+                            <span class="status archived">
+                              Archived
                             </span>
 
                           </div>
@@ -412,7 +402,7 @@ function renderList() {
 
                             <select
                               id="status-${project.id}"
-                              class="project-status"
+                              class="project-status status-select status-${project.status.toLowerCase()}"
                               data-project="${project.id}"
                             >
 
@@ -496,79 +486,6 @@ function renderList() {
                         `
                     }
 
-
-                    <!-- PROGRESS -->
-
-                    <strong>
-                      Milestone Progress
-                    </strong>
-
-
-                    <div
-                      class="progress"
-                    >
-
-                      <div
-                        class="fill green"
-                        style="
-                          width:${progress}%
-                        "
-                      ></div>
-
-                    </div>
-
-
-                    <small>
-                      ${progress}% complete
-                    </small>
-
-
-                    <hr>
-
-
-                    <!-- PROJECT TABS -->
-
-                    <div class="project-tabs">
-
-                      <button
-                        class="tab-btn ${(!activeProjectTab[project.id] || activeProjectTab[project.id] === "overview") ? "active" : ""}"
-                        data-project="${project.id}"
-                        data-tab="overview"
-                      >
-                        Overview
-                      </button>
-
-                      <button
-                        class="tab-btn ${activeProjectTab[project.id] === "tasks" ? "active" : ""}"
-                        data-project="${project.id}"
-                        data-tab="tasks"
-                      >
-                        Tasks
-                      </button>
-
-                      <button
-                        class="tab-btn ${activeProjectTab[project.id] === "inbox" ? "active" : ""}"
-                        data-project="${project.id}"
-                        data-tab="inbox"
-                      >
-                        Inbox
-                      </button>
-
-                      <button
-                        class="tab-btn ${activeProjectTab[project.id] === "milestones" ? "active" : ""}"
-                        data-project="${project.id}"
-                        data-tab="milestones"
-                      >
-                        Milestones
-                      </button>
-
-                    </div>
-
-
-                    <!-- TAB CONTENT -->
-
-                    ${renderProjectTab(project, progress)}
-
                   </div>
                 `
                 : ""
@@ -581,7 +498,12 @@ function renderList() {
       .join("");
 
 
-    document
+  replayFadeIn(container);
+
+  attachLinkChipEvents(container);
+
+
+  document
     .querySelectorAll(".project-header")
     .forEach(header => {
 
@@ -777,7 +699,7 @@ return `
       <br>
 
       <small>
-        ${progress}% complete
+        ${progress}% complete · ${getProjectHours(project.id).toFixed(1)}h logged
       </small>
 
     </div>
@@ -803,21 +725,16 @@ return `
           : `
             <ul class="skill-related-projects">
 
-              ${
-                relatedSkills
-                  .map(skill => `
-                    <li>
-                      <strong>
-                        ${escapeHTML(skill.name)}
-                      </strong>
-
-                      <small>
-                        — ${getLevelName(skill.level)}
-                      </small>
-                    </li>
-                  `)
-                  .join("")
-              }
+                  ${
+                    relatedSkills
+                      .map(skill => `
+                        <li>
+                          ${renderLinkChip("skill", skill.id, skill.name)}
+                          <small>— ${getLevelName(skill.level)}</small>
+                        </li>
+                      `)
+                      .join("")
+                  }
 
             </ul>
           `
@@ -912,84 +829,7 @@ function attachProjectManagementEvents() {
 
     addButton.addEventListener(
       "click",
-      () => {
-
-        const name =
-          prompt(
-            "Project name:"
-          );
-
-
-        if (
-          !name ||
-          !name.trim()
-        ) {
-
-          return;
-
-        }
-
-        const trimmedName =
-          name.trim();
-
-        const nameExists =
-          state.projects.some(
-            project =>
-              project.name.toLowerCase() ===
-              trimmedName.toLowerCase()
-          );
-
-        if (nameExists) {
-
-          alert(
-            "A project with this name already exists."
-          );
-
-          return;
-
-        }
-
-
-        const description =
-          prompt(
-            "Project description:"
-          ) || "";
-
-
-        state.projects.push({
-
-          id:
-            crypto.randomUUID(),
-
-          name:
-            trimmedName,
-
-          description:
-            description.trim(),
-
-          status:
-            "Planning",
-
-          archived:
-            false,
-
-          milestones:
-            []
-
-        });
-
-
-        saveData(state);
-
-
-        openedProject = null;
-
-
-        renderProjects(
-          document.getElementById("app")
-        );
-
-      }
+      openAddProjectModal
     );
 
   }
@@ -1038,54 +878,73 @@ function attachProjectManagementEvents() {
           }
 
 
-          const newName =
-            prompt(
-              "Rename project:",
-              project.name
-            );
+          openModal(`
 
+            <h3>Rename Project</h3>
 
-          if (
-            !newName ||
-            !newName.trim()
-          ) {
+            <div id="renameProjectError" class="auth-error"></div>
 
-            return;
+            <div class="modal-field">
+              <label>Name</label>
+              <input type="text" id="renameProjectInput" value="${project.name}">
+            </div>
 
-          }
+            <div class="modal-actions">
+              <button class="modal-save" id="renameProjectSave">Save</button>
+              <button class="modal-cancel" id="renameProjectCancel">Cancel</button>
+            </div>
 
-          const trimmedNewName =
-            newName.trim();
+          `);
 
-          const nameExists =
-            state.projects.some(
-              existingProject =>
-                existingProject.id !== project.id &&
-                existingProject.name.toLowerCase() ===
-                trimmedNewName.toLowerCase()
-            );
+          document
+            .getElementById("renameProjectCancel")
+            .addEventListener("click", closeModal);
 
-          if (nameExists) {
+          document
+            .getElementById("renameProjectSave")
+            .addEventListener("click", () => {
 
-            alert(
-              "A project with this name already exists."
-            );
+              const errorBox =
+                document.getElementById("renameProjectError");
 
-            return;
+              const trimmedNewName =
+                document.getElementById("renameProjectInput").value.trim();
 
-          }
+              if (!trimmedNewName) {
 
+                showModalError(errorBox, "Project name cannot be empty.");
 
-          project.name =
-            trimmedNewName;
+                return;
 
+              }
 
-          saveData(state);
+              const nameExists =
+                state.projects.some(
+                  existingProject =>
+                    existingProject.id !== project.id &&
+                    existingProject.name.toLowerCase() ===
+                    trimmedNewName.toLowerCase()
+                );
 
+              if (nameExists) {
 
-          renderProjects(
-            document.getElementById("app")
-          );
+                showModalError(errorBox, "A project with this name already exists.");
+
+                return;
+
+              }
+
+              project.name = trimmedNewName;
+
+              saveData(state);
+
+              closeModal();
+
+              renderProjects(
+                document.getElementById("app")
+              );
+
+            });
 
         }
       );
@@ -1126,40 +985,47 @@ function attachProjectManagementEvents() {
           }
 
 
-          const confirmed =
-            confirm(
-              `Archive "${project.name}"?\n\n` +
-              `The project will become read-only ` +
-              `and its history will be preserved.`
-            );
+          openModal(`
+
+            <h3>Archive Project</h3>
+
+            <p>
+              Archive "${project.name}"? It will become
+              read-only and its history will be preserved.
+              You can restore it later.
+            </p>
+
+            <div class="modal-actions">
+              <button class="modal-danger" id="archiveConfirmSave">Archive</button>
+              <button class="modal-cancel" id="archiveConfirmCancel">Cancel</button>
+            </div>
+
+          `);
+
+          document
+            .getElementById("archiveConfirmCancel")
+            .addEventListener("click", closeModal);
+
+          document
+            .getElementById("archiveConfirmSave")
+            .addEventListener("click", () => {
+
+              closeModal();
+
+              project.archived = true;
 
 
-          if (!confirmed) return;
+              saveData(state);
 
+              openedProject = null;
 
-          project.archived =
-            true;
+              projectFilter = "Archived";
 
+              renderProjects(
+                document.getElementById("app")
+              );
 
-          saveData(state);
-
-
-          openedProject = null;
-
-
-          /*
-           * Move to Archived view
-           * so the user can immediately
-           * see where the project went.
-           */
-
-          projectFilter =
-            "Archived";
-
-
-          renderProjects(
-            document.getElementById("app")
-          );
+            });
 
         }
       );
@@ -1204,104 +1070,71 @@ function attachProjectManagementEvents() {
            * Choose destination status.
            */
 
-          const selectedStatus =
-            prompt(
-              "Restore project as:\n\n" +
-              "Planning\n" +
-              "Active\n" +
-              "Paused\n" +
-              "Completed"
-            );
+          openModal(`
 
+            <h3>Restore Project</h3>
 
-          if (
-            !selectedStatus ||
-            !selectedStatus.trim()
-          ) {
+            <p>Restore "${project.name}" and choose its new status:</p>
 
-            return;
+            <div id="restoreProjectError" class="auth-error"></div>
 
-          }
+            <div class="modal-field">
+              <label>Status</label>
+              <select id="restoreStatusSelect">
+                <option value="" disabled selected>Select a status...</option>
+                <option value="Planning">Planning</option>
+                <option value="Active">Active</option>
+                <option value="Paused">Paused</option>
+                <option value="Completed">Completed</option>
+              </select>
+            </div>
 
+            <div class="modal-actions">
+              <button class="modal-save" id="restoreProjectSave">Restore</button>
+              <button class="modal-cancel" id="restoreProjectCancel">Cancel</button>
+            </div>
 
-          const normalized =
-            selectedStatus
-              .trim()
-              .toLowerCase();
+          `);
 
+          document
+            .getElementById("restoreProjectCancel")
+            .addEventListener("click", closeModal);
 
-          const validStatuses = [
-            "planning",
-            "active",
-            "paused",
-            "completed"
-          ];
+          document
+            .getElementById("restoreProjectSave")
+            .addEventListener("click", () => {
 
+              const errorBox =
+                document.getElementById("restoreProjectError");
 
-          if (
-            !validStatuses.includes(
-              normalized
-            )
-          ) {
+              const formattedStatus =
+                document.getElementById("restoreStatusSelect").value;
 
-            alert(
-              "Invalid status.\n\n" +
-              "Choose Planning, Active, " +
-              "Paused, or Completed."
-            );
+              if (!formattedStatus) {
 
-            return;
+                showModalError(errorBox, "Choose a status.");
 
-          }
+                return;
 
+              }
 
-          const formattedStatus =
-            normalized
-              .charAt(0)
-              .toUpperCase() +
-            normalized.slice(1);
+              project.archived = false;
 
+              project.status = formattedStatus;
 
-          /*
-           * Final confirmation.
-           */
+              saveData(state);
 
-          const confirmed =
-            confirm(
-              `Restore "${project.name}" ` +
-              `as ${formattedStatus}?\n\n` +
-              `The project will become editable again.`
-            );
+              closeModal();
 
+              openedProject = null;
 
-          if (!confirmed) {
+              projectFilter = formattedStatus;
 
-            return;
+              renderProjects(
+                document.getElementById("app")
+              );
 
-          }
-
-
-          project.archived =
-            false;
-
-
-          project.status =
-            formattedStatus;
-
-
-          saveData(state);
-
-
-          openedProject = null;
-
-
-          projectFilter =
-            formattedStatus;
-
-
-          renderProjects(
-            document.getElementById("app")
-          );
+            });
 
         }
       );
@@ -1314,6 +1147,96 @@ function attachProjectManagementEvents() {
 /*
  * MILESTONE CHECKBOX EVENTS
  */
+
+function openAddProjectModal() {
+
+  openModal(`
+
+    <h3>New Project</h3>
+
+    <div id="addProjectError" class="auth-error"></div>
+
+    <div class="modal-field">
+      <label>Name</label>
+      <input type="text" id="addProjectName" placeholder="e.g. Fixtional">
+    </div>
+
+    <div class="modal-field">
+      <label>Description (optional)</label>
+      <input type="text" id="addProjectDescription">
+    </div>
+
+    <div class="modal-actions">
+      <button class="modal-save" id="addProjectSave">Create Project</button>
+      <button class="modal-cancel" id="addProjectCancel">Cancel</button>
+    </div>
+
+  `);
+
+  document
+    .getElementById("addProjectCancel")
+    .addEventListener("click", closeModal);
+
+  document
+    .getElementById("addProjectSave")
+    .addEventListener("click", () => {
+
+      const errorBox =
+        document.getElementById("addProjectError");
+
+      const name =
+        document.getElementById("addProjectName").value.trim();
+
+      if (!name) {
+
+        showModalError(errorBox, "Project name cannot be empty.");
+
+        return;
+
+      }
+
+      const nameExists =
+        state.projects.some(
+          project =>
+            project.name.toLowerCase() === name.toLowerCase()
+        );
+
+      if (nameExists) {
+
+        showModalError(errorBox, "A project with this name already exists.");
+
+        return;
+
+      }
+
+      const description =
+        document.getElementById("addProjectDescription").value.trim();
+
+      state.projects.push({
+
+        id: crypto.randomUUID(),
+        name,
+        description,
+        status: "Planning",
+        archived: false,
+        milestones: []
+
+      });
+
+      saveData(state);
+
+      closeModal();
+
+      openedProject = null;
+
+      renderProjects(
+        document.getElementById("app")
+      );
+
+    });
+
+}
+
 
 function attachMilestoneEvents() {
 
@@ -1486,74 +1409,79 @@ function attachMilestoneManagementEvents() {
           }
 
 
-          const title =
-            prompt(
-              "Milestone name:"
-            );
+          openModal(`
 
+            <h3>Add Milestone</h3>
 
-          if (
-            !title ||
-            !title.trim()
-          ) {
+            <div id="addMilestoneError" class="auth-error"></div>
 
-            return;
+            <div class="modal-field">
+              <label>Milestone name</label>
+              <input type="text" id="addMilestoneInput">
+            </div>
 
-          }
+            <div class="modal-actions">
+              <button class="modal-save" id="addMilestoneSave">Add</button>
+              <button class="modal-cancel" id="addMilestoneCancel">Cancel</button>
+            </div>
 
-          const trimmedTitle =
-            title.trim();
+          `);
 
-          const titleExists =
-            project.milestones.some(
-              milestone =>
-                milestone.title.toLowerCase() ===
-                trimmedTitle.toLowerCase()
-            );
+          document
+            .getElementById("addMilestoneCancel")
+            .addEventListener("click", closeModal);
 
-          if (titleExists) {
+          document
+            .getElementById("addMilestoneSave")
+            .addEventListener("click", () => {
 
-            alert(
-              "A milestone with this name already exists " +
-              "on this project."
-            );
+              const errorBox =
+                document.getElementById("addMilestoneError");
 
-            return;
+              const trimmedTitle =
+                document.getElementById("addMilestoneInput").value.trim();
 
-          }
+              if (!trimmedTitle) {
 
+                showModalError(errorBox, "Milestone name cannot be empty.");
 
-          const nextId =
-            project.milestones.length > 0
+                return;
 
-              ? Math.max(
-                  ...project.milestones.map(
-                    milestone =>
-                      milestone.id
-                  )
-                ) + 1
+              }
 
-              : 1;
+              const titleExists =
+                project.milestones.some(
+                  milestone =>
+                    milestone.title.toLowerCase() ===
+                    trimmedTitle.toLowerCase()
+                );
 
+              if (titleExists) {
 
-          project.milestones.push({
+                showModalError(errorBox, "A milestone with this name already exists.");
 
-            id:
-              nextId,
+                return;
 
-            title:
-              trimmedTitle,
+              }
 
-            done:
-              false
+              const nextId =
+                project.milestones.length > 0
+                  ? Math.max(...project.milestones.map(m => m.id)) + 1
+                  : 1;
 
-          });
+              project.milestones.push({
+                id: nextId,
+                title: trimmedTitle,
+                done: false
+              });
 
+              saveData(state);
 
-          saveData(state);
+              closeModal();
 
+              renderList();
 
-          renderList();
+            });
 
         }
       );
@@ -1609,53 +1537,71 @@ function attachMilestoneManagementEvents() {
           if (!milestone) return;
 
 
-          const newTitle =
-            prompt(
-              "Rename milestone:",
-              milestone.title
-            );
+          openModal(`
 
+            <h3>Rename Milestone</h3>
 
-          if (
-            !newTitle ||
-            !newTitle.trim()
-          ) {
+            <div id="editMilestoneError" class="auth-error"></div>
 
-            return;
+            <div class="modal-field">
+              <label>Milestone name</label>
+              <input type="text" id="editMilestoneInput" value="${milestone.title}">
+            </div>
 
-          }
+            <div class="modal-actions">
+              <button class="modal-save" id="editMilestoneSave">Save</button>
+              <button class="modal-cancel" id="editMilestoneCancel">Cancel</button>
+            </div>
 
-          const trimmedNewTitle =
-            newTitle.trim();
+          `);
 
-          const titleExists =
-            project.milestones.some(
-              existingMilestone =>
-                existingMilestone.id !== milestone.id &&
-                existingMilestone.title.toLowerCase() ===
-                trimmedNewTitle.toLowerCase()
-            );
+          document
+            .getElementById("editMilestoneCancel")
+            .addEventListener("click", closeModal);
 
-          if (titleExists) {
+          document
+            .getElementById("editMilestoneSave")
+            .addEventListener("click", () => {
 
-            alert(
-              "A milestone with this name already exists " +
-              "on this project."
-            );
+              const errorBox =
+                document.getElementById("editMilestoneError");
 
-            return;
+              const trimmedNewTitle =
+                document.getElementById("editMilestoneInput").value.trim();
 
-          }
+              if (!trimmedNewTitle) {
 
+                showModalError(errorBox, "Milestone name cannot be empty.");
 
-          milestone.title =
-            trimmedNewTitle;
+                return;
 
+              }
 
-          saveData(state);
+              const titleExists =
+                project.milestones.some(
+                  existingMilestone =>
+                    existingMilestone.id !== milestone.id &&
+                    existingMilestone.title.toLowerCase() ===
+                    trimmedNewTitle.toLowerCase()
+                );
 
+              if (titleExists) {
 
-          renderList();
+                showModalError(errorBox, "A milestone with this name already exists.");
+
+                return;
+
+              }
+
+              milestone.title = trimmedNewTitle;
+
+              saveData(state);
+
+              closeModal();
+
+              renderList();
+
+            });
 
         }
       );
@@ -1715,27 +1661,23 @@ function attachMilestoneManagementEvents() {
           if (!milestone) return;
 
 
-          const confirmed =
-            confirm(
-              `Delete "${milestone.title}"?`
-            );
+confirmSimple({
+  title: "Delete Milestone",
+  message: `Delete "${milestone.title}"?`,
+  onConfirm: () => {
 
+              project.milestones =
+                project.milestones.filter(
+                  m => m.id !== milestoneId
+                );
 
-          if (!confirmed) return;
+              saveData(state);
 
+              renderList();
 
-          project.milestones =
-            project.milestones.filter(
-              milestone =>
-                milestone.id !==
-                milestoneId
-            );
+            }
 
-
-          saveData(state);
-
-
-          renderList();
+          });
 
         }
       );

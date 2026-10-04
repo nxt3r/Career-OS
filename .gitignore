@@ -12,3 +12,6 @@ node_modules/
 
 # Admin panel — never publish publicly
 admin/
+
+# Temporary files (Delete before final publish)
+desktop.ini

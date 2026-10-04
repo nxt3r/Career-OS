@@ -23,14 +23,16 @@ export async function initState(uid) {
   const loaded =
     await loadUserData(uid);
 
-  Object.assign(state, loaded || {});
+  Object.assign(
+    state,
+    loaded || {}
+  );
 
   runMigrations();
 
   saveData(state);
 
   return state;
-
 }
 
 

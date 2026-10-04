@@ -1,0 +1,58 @@
+.review-period-controls{
+  margin-bottom:20px;
+}
+
+.review-period-tabs{
+  display:flex;
+  flex-wrap:wrap;
+  gap:8px;
+  margin-bottom:12px;
+}
+
+.period-tab{
+  width:auto;
+  padding:8px 14px;
+  background:var(--surface-2);
+  color:white;
+  transition:transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.period-tab:hover{
+  transform:translateY(-2px);
+  box-shadow:0 4px 12px rgba(0,0,0,0.25);
+}
+
+.period-tab.active{
+  background:var(--accent);
+}
+
+.review-period-nav{
+  display:flex;
+  align-items:center;
+  gap:14px;
+}
+
+.review-period-nav button{
+  width:auto;
+  padding:8px 14px;
+  background:var(--surface-2);
+  color:white;
+}
+
+.review-period-nav span{
+  opacity:.8;
+  font-size:.9rem;
+}
+
+.chart-box{
+  position:relative;
+  height:280px;
+  margin-top:10px;
+}
+
+body[data-module="reviews"] .ambient-background{
+  background-image: url("../assets/backgrounds/reviews-bg.svg");
+  background-size: cover;
+  background-position: center;
+  opacity: 0.6;
+}

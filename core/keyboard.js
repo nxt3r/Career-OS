@@ -3,6 +3,7 @@ import {
   startTimer,
   togglePause
 } from "../modules/timer/timer.js";
+import { state } from "./state.js";
 
 export function initKeyboard() {
 
@@ -98,6 +99,24 @@ if (
 
     case "7":
       goTo("settings");
+      break;
+
+
+    case "f":
+    case "F":
+      if (state.activeTimer) {
+
+        import("../modules/focus/focusMode.js").then(({ enterFocusMode, exitFocusMode, isFocusModeOpen }) => {
+
+          if (isFocusModeOpen()) {
+            exitFocusMode();
+          } else {
+            enterFocusMode();
+          }
+
+        });
+
+      }
       break;
 
   }
