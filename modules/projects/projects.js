@@ -533,6 +533,8 @@ function renderList() {
 
   attachMilestoneEvents();
 
+  attachTaskEvents();
+
   attachStatusEvents();
 
   attachMilestoneManagementEvents();
@@ -552,13 +554,45 @@ function renderProjectTab(project, progress) {
 
   if (tab === "tasks") {
 
+    const tasks =
+      project.tasks || [];
+
     return `
       <div class="project-tab-panel">
-        <p>
-          ${project.milestones.length > 0
-            ? "Task tracking is available in the milestones view."
-            : "No tasks yet."}
-        </p>
+
+        <div class="project-actions">
+          <button class="add-task" data-project="${project.id}">
+            + Add Task
+          </button>
+        </div>
+
+        ${
+          tasks.length === 0
+            ? `<p>No tasks yet.</p>`
+            : `
+              <ul class="milestone-list">
+                ${
+                  tasks.map(task => `
+                    <li class="milestone">
+                      <label>
+                        <input
+                          type="checkbox"
+                          data-project="${project.id}"
+                          data-task="${task.id}"
+                          ${task.done ? "checked" : ""}
+                        >
+                        <span class="${task.done ? "task-done-text" : ""}">${escapeHTML(task.text)}</span>
+                      </label>
+                      <div class="project-actions inline-actions">
+                        <button class="delete-task" data-project="${project.id}" data-task="${task.id}">Delete</button>
+                      </div>
+                    </li>
+                  `).join("")
+                }
+              </ul>
+            `
+        }
+
       </div>
     `;
 
@@ -1307,6 +1341,109 @@ function attachMilestoneEvents() {
       );
 
     });
+
+}
+
+
+/*
+ * TASK EVENTS
+ */
+
+function attachTaskEvents() {
+
+  document.querySelectorAll(".add-task").forEach(button => {
+
+    button.addEventListener("click", () => {
+
+      const project =
+        state.projects.find(p => p.id === button.dataset.project);
+
+      if (!project || project.archived) return;
+
+      if (!Array.isArray(project.tasks)) project.tasks = [];
+
+      openModal(`
+        <h3>Add Task</h3>
+        <div id="addTaskError" class="auth-error"></div>
+        <div class="modal-field">
+          <label>Task</label>
+          <input type="text" id="addTaskInput">
+        </div>
+        <div class="modal-actions">
+          <button class="modal-save" id="addTaskSave">Add</button>
+          <button class="modal-cancel" id="addTaskCancel">Cancel</button>
+        </div>
+      `);
+
+      document.getElementById("addTaskCancel").addEventListener("click", closeModal);
+
+      document.getElementById("addTaskSave").addEventListener("click", () => {
+
+        const errorBox = document.getElementById("addTaskError");
+        const text = document.getElementById("addTaskInput").value.trim();
+
+        if (!text) {
+          showModalError(errorBox, "Task cannot be empty.");
+          return;
+        }
+
+        project.tasks.push({ id: crypto.randomUUID(), text, done: false });
+
+        saveData(state);
+
+        closeModal();
+
+        renderList();
+
+      });
+
+    });
+
+  });
+
+  document.querySelectorAll('.milestone input[data-task]').forEach(box => {
+
+    box.addEventListener("change", () => {
+
+      const project =
+        state.projects.find(p => p.id === box.dataset.project);
+
+      if (!project) return;
+
+      const task =
+        (project.tasks || []).find(t => t.id === box.dataset.task);
+
+      if (!task) return;
+
+      task.done = box.checked;
+
+      saveData(state);
+
+      renderList();
+
+    });
+
+  });
+
+  document.querySelectorAll(".delete-task").forEach(button => {
+
+    button.addEventListener("click", () => {
+
+      const project =
+        state.projects.find(p => p.id === button.dataset.project);
+
+      if (!project) return;
+
+      project.tasks =
+        (project.tasks || []).filter(t => t.id !== button.dataset.task);
+
+      saveData(state);
+
+      renderList();
+
+    });
+
+  });
 
 }
 

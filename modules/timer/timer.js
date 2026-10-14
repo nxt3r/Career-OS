@@ -3,6 +3,7 @@ import { saveData } from "../../core/storage.js";
 import { pauseAmbient, resumeAmbient } from "../../core/ambientAudio.js";
 import { getDisplayStatus } from "../skills/skills.js";
 import { renderLinkChip, attachLinkChipEvents } from "../../core/linkChip.js";
+import { publishMyRanking } from "../../core/rankings.js";
 
 let timer = null;
 let timerApp = null;
@@ -54,7 +55,7 @@ export function renderTimer(app) {
     null;
 
   const projectOptions = state.projects
-    .filter(project => !project.archived && project.status === "Active" || project.status === "Planning")
+    .filter(project => !project.archived && (project.status === "Active" || project.status === "Planning"))
     .map(
       project => `
         <option value="${project.id}">
@@ -394,6 +395,10 @@ export function renderTimer(app) {
     state.activeTimer = null;
 
     saveData(state);
+
+    publishMyRanking(state).catch(error =>
+      console.error("Ranking publish error:", error)
+    );
 
     renderTimer(timerApp);
 

@@ -1,6 +1,7 @@
 import { state } from "../../core/state.js";
 import { saveData, resetAllData } from "../../core/storage.js";
 import { auth } from "../../core/firebase.js";
+import { clearMyRanking } from "../../core/rankings.js";
 import {
   getUserProfile,
   requestAccountDeletion
@@ -589,6 +590,10 @@ async function resetData() {
 
       await resetAllData();
 
+      await clearMyRanking().catch(error =>
+        console.error("Ranking clear error:", error)
+      );
+
       location.reload();
 
     }
@@ -993,6 +998,10 @@ function showDeleteAccountConfirm() {
           return;
 
         }
+
+        await clearMyRanking().catch(error =>
+          console.error("Ranking clear error:", error)
+        );
 
         await requestAccountDeletion(user.uid);
 

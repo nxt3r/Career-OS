@@ -6,10 +6,29 @@ import { renderSkills } from "../modules/skills/skills.js";
 import { renderCareer } from "../modules/career/career.js";
 import { renderReviews } from "../modules/reviews/reviews.js";
 import { renderSettings } from "../modules/settings/settings.js";
-import { renderAccountPanel } from "../modules/profile/accountPanel.js";
+import { renderPrivacyPolicy, renderFAQ, renderLicense } from "../modules/help/staticPages.js";
+import { renderAccountPanel } from "../modules/profile/accountPanel.js"; 
+import { renderRankings } from "../modules/rankings/rankings.js"; 
+
+
+let pageTeardown = null;
+
+export function setPageTeardown(fn) {
+
+    pageTeardown = fn;
+
+}
 
 
 export function navigate(page, targetId = null) {
+
+    if (pageTeardown) {
+
+        pageTeardown();
+
+        pageTeardown = null;
+
+    }
 
     const app = document.getElementById("app");
 
@@ -45,12 +64,32 @@ export function navigate(page, targetId = null) {
             renderReviews(app);
             break;
 
+        case "rankings":
+            renderRankings(app);
+            break;
+
         case "settings":
             renderSettings(app);
             break;
 
+        case "privacy":
+            renderPrivacyPolicy(app);
+            break;
+
+        case "faq":
+            renderFAQ(app);
+            break;
+
+        case "license":
+            renderLicense(app);
+            break;
+
         case "account":
             renderAccountPanelRoute(app);
+            break;
+
+        case "chat":
+            renderChatRoute(app);
             break;
 
         default:
@@ -101,6 +140,23 @@ export function loadRoute() {
         hash || "dashboard";
 
     navigate(page);
+
+}
+
+
+async function renderChatRoute(app) {
+
+    const { auth } = await import("./firebase.js");
+    const { getUserProfile } = await import("./username.js");
+    const { renderChatPage } = await import("../modules/help/chatPage.js");
+
+    const user = auth.currentUser;
+
+    if (!user) return;
+
+    const profile = await getUserProfile(user.uid);
+
+    renderChatPage(app, user, profile);
 
 }
 

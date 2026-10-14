@@ -106,6 +106,12 @@ export async function renderProfileCorner(container, user) {
                 Account Settings
               </button>
 
+              <button id="profileMenuFAQ">FAQ</button>
+              <button id="profileMenuPrivacy">Privacy Policy</button>
+              <button id="profileMenuLicense">License</button>
+              <button id="profileMenuBugReport">Report a Bug</button>
+              <button id="profileMenuChat">Help / Chat</button>
+
               <button id="profileMenuLogout">
                 Log Out
               </button>
@@ -146,6 +152,45 @@ export async function renderProfileCorner(container, user) {
         goTo("account");
 
       });
+
+          document.getElementById("profileMenuFAQ").addEventListener("click", async e => {
+      e.stopPropagation();
+      menuOpen = false;
+      renderProfileCorner(container, user);
+      const { goTo } = await import("../../core/router.js");
+      goTo("faq");
+    });
+
+    document.getElementById("profileMenuPrivacy").addEventListener("click", async e => {
+      e.stopPropagation();
+      menuOpen = false;
+      renderProfileCorner(container, user);
+      const { goTo } = await import("../../core/router.js");
+      goTo("privacy");
+    });
+
+    document.getElementById("profileMenuLicense").addEventListener("click", async e => {
+      e.stopPropagation();
+      menuOpen = false;
+      renderProfileCorner(container, user);
+      const { goTo } = await import("../../core/router.js");
+      goTo("license");
+    });
+
+    document.getElementById("profileMenuBugReport").addEventListener("click", async e => {
+      e.stopPropagation();
+      menuOpen = false;
+      renderProfileCorner(container, user);
+      const { openBugReportModal } = await import("../help/bugReport.js");
+      openBugReportModal();
+    });
+
+    document.getElementById("profileMenuChat").addEventListener("click", e => {
+      e.stopPropagation();
+      menuOpen = false;
+      renderProfileCorner(container, user);
+      goTo("chat");
+    });
 
     document
       .getElementById("profileMenuLogout")

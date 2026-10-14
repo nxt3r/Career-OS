@@ -143,6 +143,15 @@ export function renderAuthScreen(container) {
           }
         </p>
 
+        <p class="auth-switch">
+          Need help? <a href="#" id="authSupport">Contact support</a>
+        </p>
+
+        <p class="auth-credit">
+          A product of
+          <a class="nx-credit" href="https://nxt3r.github.io/nx-conglo/" target="_blank" rel="noopener noreferrer"><img src="assets/nx-conglo-logo.png" alt="Nx Conglo"></a>
+        </p>
+
       </div>
 
     </div>
@@ -172,6 +181,10 @@ export function renderVerifyScreen(container, user) {
           We sent a verification link to
           <strong>${escapeHTML(user.email)}</strong>.
           Click it, then come back here.
+        </p>
+
+        <p class="verify-hint">
+          Can't find it? Check your spam or junk folder, then press "Resend Email" below.
         </p>
 
         <div id="authError" class="auth-error"></div>
@@ -313,6 +326,33 @@ function attachAuthEvents(container) {
           : "login";
 
       renderAuthScreen(container);
+
+    });
+
+  document
+    .getElementById("authSupport")
+    .addEventListener("click", async event => {
+
+      event.preventDefault();
+
+      const errorBox =
+        document.getElementById("authError");
+
+      try {
+
+        const { openGuestSupport } =
+          await import("../help/guestSupport.js");
+
+        await openGuestSupport(container);
+
+      } catch (error) {
+
+        console.error("Guest support error:", error);
+
+        errorBox.textContent =
+          "Couldn't open support right now. Please try again.";
+
+      }
 
     });
 

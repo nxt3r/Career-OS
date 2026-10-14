@@ -1,0 +1,261 @@
+/* ===========================
+   RANKINGS
+=========================== */
+
+body[data-module="rankings"]{
+  --accent:var(--accent-rankings, #F59E0B);
+}
+
+.rk-page{
+  max-width:760px;
+  margin:0 auto;
+}
+
+.rk-sub{
+  margin:-8px 0 16px;
+  font-size:.85rem;
+  color:var(--muted);
+}
+
+.rk-controls{
+  display:flex;
+  flex-wrap:wrap;
+  align-items:center;
+  gap:10px;
+  margin-bottom:16px;
+}
+
+.rk-controls select{
+  width:auto;
+  margin:0;
+  font-weight:600;
+  font-size:.85rem;
+}
+
+/* Anonymous switch */
+
+.rk-switch{
+  display:inline-flex;
+  align-items:center;
+  gap:8px;
+  margin:0 0 0 auto;
+  font-size:.85rem;
+  color:var(--text);
+  cursor:pointer;
+  position:relative;
+}
+
+.rk-switch input{
+  position:absolute;
+  opacity:0;
+  width:0;
+  height:0;
+}
+
+.rk-track{
+  width:36px;
+  height:20px;
+  border-radius:999px;
+  background:var(--surface-2);
+  border:1px solid var(--surface-edge-strong);
+  position:relative;
+  transition:background .2s ease;
+}
+
+.rk-track::after{
+  content:"";
+  position:absolute;
+  top:2px;
+  left:2px;
+  width:14px;
+  height:14px;
+  border-radius:50%;
+  background:var(--text);
+  transition:transform .2s ease;
+}
+
+.rk-switch input:checked + .rk-track{
+  background:var(--accent);
+}
+
+.rk-switch input:checked + .rk-track::after{
+  transform:translateX(16px);
+}
+
+.rk-switch input:focus-visible + .rk-track{
+  outline:2px solid var(--accent);
+  outline-offset:2px;
+}
+
+/* Board */
+
+.rk-board{
+  --rk-color:var(--accent);
+  position:relative;
+  overflow:clip;
+  background:linear-gradient(180deg, var(--surface-sheen), transparent 40%), var(--surface);
+  border:1px solid var(--surface-edge-strong);
+  border-radius:var(--radius);
+  box-shadow:0 6px 20px rgba(0,0,0,0.45), inset 0 1px 0 var(--surface-edge);
+}
+
+.rk-board[data-metric="focus"]{ --rk-color:var(--success); }
+.rk-board[data-metric="distraction"]{ --rk-color:var(--danger); }
+
+.rk-board::before{
+  content:"";
+  position:absolute;
+  inset:0 0 auto 0;
+  height:150px;
+  background:radial-gradient(
+    ellipse at 50% -20%,
+    color-mix(in srgb, var(--rk-color) 30%, transparent),
+    transparent 70%
+  );
+  pointer-events:none;
+}
+
+.rk-msg{
+  position:relative;
+  margin:0;
+  padding:28px 16px;
+  text-align:center;
+  color:var(--muted);
+}
+
+/* Podium */
+
+.rk-podium{
+  position:relative;
+  display:grid;
+  grid-template-columns:1fr 1fr 1fr;
+  gap:10px;
+  align-items:end;
+  padding:22px 14px 10px;
+}
+
+.rk-pod{
+  min-width:0;
+  text-align:center;
+  padding:12px 6px;
+  background:var(--surface-3);
+  border:1px solid var(--surface-edge);
+  border-radius:var(--radius-sm);
+}
+
+.rk-pod.first{
+  padding:20px 6px 18px;
+  border-color:color-mix(in srgb, var(--rk-color) 60%, transparent);
+  box-shadow:0 0 24px color-mix(in srgb, var(--rk-color) 25%, transparent);
+}
+
+.rk-pod.me{
+  background:color-mix(in srgb, var(--rk-color) 14%, var(--surface-3));
+}
+
+.rk-medal{
+  display:block;
+  font-size:1.25rem;
+  margin-bottom:6px;
+}
+
+.rk-pod-avatar{
+  display:flex;
+  justify-content:center;
+  margin-bottom:6px;
+}
+
+.rk-pod-name{
+  font-size:.8rem;
+  font-weight:600;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+
+.rk-pod-value{
+  margin-top:2px;
+  font-size:.95rem;
+  font-weight:700;
+  color:var(--rk-color);
+}
+
+/* List rows */
+
+.rk-list{
+  position:relative;
+  padding:6px 10px 10px;
+}
+
+.rk-row,
+.rk-youbar{
+  display:grid;
+  grid-template-columns:30px 28px 1fr auto;
+  gap:10px;
+  align-items:center;
+}
+
+.rk-row{
+  padding:9px 8px;
+  border-radius:var(--radius-sm);
+}
+
+.rk-row.me{
+  background:color-mix(in srgb, var(--rk-color) 14%, transparent);
+}
+
+.rk-row-main{
+  min-width:0;
+}
+
+.rk-rank{
+  text-align:center;
+  font-weight:700;
+  color:var(--muted);
+}
+
+.rk-name{
+  font-size:.9rem;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+
+.rk-value{
+  font-size:.9rem;
+  font-weight:700;
+}
+
+.rk-bar{
+  height:4px;
+  margin-top:5px;
+  border-radius:999px;
+  background:var(--surface-2);
+  overflow:hidden;
+}
+
+.rk-bar > span{
+  display:block;
+  height:100%;
+  border-radius:999px;
+  background:var(--rk-color);
+}
+
+/* Pinned "You" bar */
+
+.rk-youbar{
+  position:sticky;
+  bottom:0;
+  padding:12px 18px;
+  border-top:1px solid var(--surface-edge-strong);
+  background:color-mix(in srgb, var(--surface) 92%, transparent);
+  backdrop-filter:blur(8px);
+}
+
+@media (max-width:600px){
+
+  .rk-switch{ margin-left:0; }
+
+  .rk-podium{ gap:6px; padding:18px 8px 8px; }
+
+}

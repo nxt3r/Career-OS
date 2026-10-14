@@ -6,7 +6,7 @@ export function createSidebar() {
     document.getElementById("sidebar");
 
   sidebar.innerHTML = `
-    <h1>Career OS</h1>
+    <h1><a class="sidebar-brand" href="#dashboard">Career OS</a></h1>
 
     <button id="navDashboard" data-page="dashboard">
       Dashboard
@@ -30,6 +30,10 @@ export function createSidebar() {
 
     <button id="navReviews" data-page="reviews">
       Reviews
+    </button>
+
+    <button id="navRankings" data-page="rankings">
+      Rankings
     </button>
 
     <button id="navSettings" data-page="settings">
@@ -85,6 +89,14 @@ export function createSidebar() {
     .addEventListener(
       "click",
       () => goTo("reviews")
+    );
+
+
+  document
+    .getElementById("navRankings")
+    .addEventListener(
+      "click",
+      () => goTo("rankings")
     );
 
 

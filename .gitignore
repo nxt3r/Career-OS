@@ -15,3 +15,5 @@ admin/
 
 # Temporary files (Delete before final publish)
 desktop.ini
+
+# Audio files (Publish independently on HUB before final publish)

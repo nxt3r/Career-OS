@@ -18,6 +18,20 @@ function handleKeydown(event) {
 
  const target = event.target;
 
+ if (event.ctrlKey && (event.key === "q" || event.key === "Q")) {
+
+   event.preventDefault();
+
+   import("../modules/dashboard/quickCapture.js").then(({ openQuickCaptureModal }) => {
+
+     openQuickCaptureModal();
+
+   });
+
+   return;
+
+ }
+
 /*
  * Special case:
  * Enter inside the Activity input
@@ -117,8 +131,9 @@ if (
         });
 
       }
-      break;
 
+    break;
+    
   }
 
 }

@@ -1,0 +1,203 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ---------------------------------------------------------
+    // Helpers
+    // ---------------------------------------------------------
+
+    // A real, signed-in account. Anonymous guests (used only for the
+    // "Contact support" chat on the login screen) are NOT members.
+    function isMember() {
+      return request.auth != null
+        && request.auth.token.firebase.sign_in_provider != 'anonymous';
+    }
+
+    function roleRank(role) {
+      return role == 'owner' ? 3
+        : role == 'admin' ? 2
+        : role == 'moderator' ? 1
+        : 0;
+    }
+
+    function roleOf(uid) {
+      return exists(/databases/$(database)/documents/users/$(uid))
+        ? get(/databases/$(database)/documents/users/$(uid)).data.get('role', 'user')
+        : 'user';
+    }
+
+    function rankOf(uid) {
+      return roleRank(roleOf(uid));
+    }
+
+    function isSuspended(uid) {
+      return exists(/databases/$(database)/documents/users/$(uid)) &&
+        get(/databases/$(database)/documents/users/$(uid)).data.get('suspended', false) == true;
+    }
+
+    function myRank() {
+      return rankOf(request.auth.uid);
+    }
+
+    function isStaff() {
+      return request.auth != null && myRank() >= 1 && !isSuspended(request.auth.uid);
+    }
+
+    function isManager() {
+      return request.auth != null && myRank() >= 2 && !isSuspended(request.auth.uid);
+    }
+
+    function affectedKeys() {
+      return request.resource.data.diff(resource.data).affectedKeys();
+    }
+
+
+    // ---------------------------------------------------------
+    // Users
+    // ---------------------------------------------------------
+
+    match /users/{uid} {
+
+      allow read: if isMember() && (request.auth.uid == uid || isStaff());
+
+      allow create: if isMember() && request.auth.uid == uid &&
+        request.resource.data.role == 'user' &&
+        request.resource.data.suspended == false;
+
+      allow update: if isMember() && (
+        (request.auth.uid == uid &&
+          affectedKeys().hasOnly(['displayName','avatarUrl','avatarEmoji','avatarColor','username','pendingDeletion']))
+        ||
+        (myRank() > rankOf(uid) &&
+          roleRank(request.resource.data.role) < myRank())
+      );
+
+      allow delete: if isManager() && myRank() > rankOf(uid);
+
+    }
+
+
+    // ---------------------------------------------------------
+    // Usernames
+    // ---------------------------------------------------------
+
+    match /usernames/{username} {
+      allow read: if isMember();
+      allow create: if isMember() &&
+        (request.resource.data.uid == request.auth.uid || isManager());
+      allow delete: if isMember() &&
+        (resource.data.uid == request.auth.uid || isManager());
+      allow update: if false;
+    }
+
+
+    // ---------------------------------------------------------
+    // Private app data
+    // ---------------------------------------------------------
+
+    match /userData/{uid} {
+      allow read, write: if isMember() && (
+        (request.auth.uid == uid && !isSuspended(uid))
+        ||
+        (isStaff() && myRank() > rankOf(uid))
+      );
+    }
+
+
+    // ---------------------------------------------------------
+    // Activity log
+    // ---------------------------------------------------------
+
+    match /auditLog/{entryId} {
+      allow read: if request.auth != null && myRank() >= 1;
+      allow create: if request.auth != null && isStaff() &&
+        request.resource.data.actorUid == request.auth.uid &&
+        request.resource.data.actorRank == myRank();
+      allow update, delete: if false;
+    }
+
+
+    // ---------------------------------------------------------
+    // Bug reports
+    // ---------------------------------------------------------
+
+    match /bugReports/{reportId} {
+      allow create: if isMember() && request.resource.data.reporterUid == request.auth.uid;
+      allow read, update: if request.auth != null &&
+        exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('role', 'user') != 'user';
+    }
+
+
+    // ---------------------------------------------------------
+    // Support chats
+    // (intentionally open to anonymous guests as well as members)
+    // ---------------------------------------------------------
+
+    match /chats/{chatId} {
+
+      allow read: if request.auth != null && (
+        resource.data.userUid == request.auth.uid || isStaff()
+      );
+
+      allow create: if request.auth != null &&
+        request.resource.data.userUid == request.auth.uid;
+
+      allow update: if request.auth != null && (
+        isStaff() ||
+        (resource.data.userUid == request.auth.uid &&
+         request.resource.data.diff(resource.data).affectedKeys()
+           .hasOnly(['status','satisfaction','claimedByUid','claimedByUsername','claimedByRole','lastMessageAt','ratings']))
+      );
+
+      match /messages/{messageId} {
+
+        allow read: if request.auth != null && (
+          get(/databases/$(database)/documents/chats/$(chatId)).data.userUid == request.auth.uid ||
+          isStaff()
+        );
+
+        allow create: if request.auth != null && (
+          (get(/databases/$(database)/documents/chats/$(chatId)).data.userUid == request.auth.uid &&
+           (request.resource.data.senderUid == request.auth.uid ||
+            request.resource.data.senderRole == 'bot')) ||
+          isStaff()
+        );
+
+      }
+
+    }
+
+
+    // ---------------------------------------------------------
+    // Staff reports (top-level collection, NOT inside chats)
+    // ---------------------------------------------------------
+
+    match /staffReports/{reportId} {
+
+      allow create: if request.auth != null && isStaff() &&
+        request.resource.data.reporterUid == request.auth.uid &&
+        request.resource.data.targetUid != request.auth.uid &&
+        rankOf(request.resource.data.targetUid) >= 1 &&
+        rankOf(request.resource.data.targetUid) < 3;
+
+      allow read, update: if request.auth != null && isManager();
+
+    }
+
+
+    // ---------------------------------------------------------
+    // Rankings (public weekly / monthly totals, members only)
+    // ---------------------------------------------------------
+
+    match /rankings/{uid} {
+      allow read: if isMember();
+      allow create, update: if isMember()
+        && request.auth.uid == uid
+        && !isSuspended(uid);
+      allow delete: if isMember()
+        && (request.auth.uid == uid || isManager());
+    }
+
+  }
+}

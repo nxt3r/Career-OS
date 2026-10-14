@@ -3133,8 +3133,22 @@ function addEvidence(
 
       if (type === "Link" || type === "Document" || type === "Artifact") {
 
-        url =
-          document.getElementById("evidenceUrl").value.trim() || null;
+        const rawUrl =
+          document.getElementById("evidenceUrl").value.trim();
+
+        if (rawUrl) {
+
+          if (!/^https?:\/\/.+\..+/.test(rawUrl)) {
+
+            showModalError(errorBox, "Enter a valid URL starting with http:// or https://");
+
+            return;
+
+          }
+
+          url = rawUrl;
+
+        }
 
       }
 
@@ -3247,8 +3261,18 @@ function editEvidence(
 
       if (showUrl) {
 
-        evidence.url =
-          document.getElementById("editEvidenceUrl").value.trim() || null;
+        const rawUrl =
+          document.getElementById("editEvidenceUrl").value.trim();
+
+        if (rawUrl && !/^https?:\/\/.+\..+/.test(rawUrl)) {
+
+          showModalError(errorBox, "Enter a valid URL starting with http:// or https://");
+
+          return;
+
+        }
+
+        evidence.url = rawUrl || null;
 
       }
 

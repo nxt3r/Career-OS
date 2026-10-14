@@ -4,6 +4,7 @@ import {
   signInWithEmailAndPassword,
   signOut,
   onAuthStateChanged,
+  signInAnonymously,
   GoogleAuthProvider,
   GithubAuthProvider,
   signInWithPopup,
@@ -164,5 +165,11 @@ export function getFriendlyAuthError(error) {
     map[error.code] ||
     "Something went wrong. Please try again."
   );
+
+}
+
+export function signInAsGuest() {
+
+  return signInAnonymously(auth);
 
 }

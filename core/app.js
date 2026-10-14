@@ -67,6 +67,25 @@ onAuthChange(async user => {
 
   }
 
+  if (user.isAnonymous) {
+
+    const { isGuestSupportOpen } =
+      await import("../modules/help/guestSupport.js");
+
+    showScreen("auth");
+
+    if (!isGuestSupportOpen()) {
+
+      renderAuthScreen(
+        document.getElementById("authScreen")
+      );
+
+    }
+
+    return;
+
+  }
+
   showScreen("loading");
 
   const profile =
@@ -108,9 +127,17 @@ onAuthChange(async user => {
           <h3>Account Suspended</h3>
 
           <p>
-            This account has been suspended. Contact
-            support if you believe this is a mistake.
+            This account has been suspended. Contact support if you believe this is a mistake.
+            ${
+              profile.suspendedReason
+                ? `<span class="suspend-reason">Reason: ${profile.suspendedReason}</span>`
+                : ""
+            }
           </p>
+
+          <button id="contactSupportBtn">
+            Contact Support
+          </button>
 
           <button id="suspendedLogout">
             Log Out
@@ -128,6 +155,22 @@ onAuthChange(async user => {
     document
       .getElementById("suspendedLogout")
       .addEventListener("click", () => logOutUser());
+
+    document
+      .getElementById("contactSupportBtn")
+      .addEventListener("click", async () => {
+
+        const { renderChatPage } =
+          await import("../modules/help/chatPage.js");
+
+        renderChatPage(
+          document.getElementById("authScreen"),
+          user,
+          profile,
+          { suspended: true }
+        );
+
+      });
 
     return;
 
