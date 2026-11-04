@@ -1,4 +1,5 @@
 import { state } from "../../core/state.js";
+import { showSuccess, setFlash } from "../../core/modal.js";
 import { saveData, resetAllData } from "../../core/storage.js";
 import { auth } from "../../core/firebase.js";
 import { clearMyRanking } from "../../core/rankings.js";
@@ -468,6 +469,8 @@ function deleteSkillCategory(name) {
 
     title: "Delete Skill Category",
 
+    successMessage: "Skill category deleted successfully.",
+
     message: `Delete "${name}"?${warning}`,
 
     confirmText: name,
@@ -589,6 +592,8 @@ async function resetData() {
     onConfirm: async () => {
 
       await resetAllData();
+
+      setFlash("All data was reset successfully.");
 
       await clearMyRanking().catch(error =>
         console.error("Ranking clear error:", error)
@@ -826,6 +831,9 @@ function startProjectDeleteReauth(project) {
 
         closeModal();
 
+        showSuccess("Project deleted permanently.");
+
+
       } catch (error) {
 
         console.error("Project delete error:", error);
@@ -1004,6 +1012,8 @@ function showDeleteAccountConfirm() {
         );
 
         await requestAccountDeletion(user.uid);
+
+        setFlash("Your account is scheduled for deletion. Log in within 30 days to restore it.");
 
         await logOutUser();
 
@@ -1261,6 +1271,8 @@ function deleteCategory(category) {
   confirmDelete({
 
     title: "Delete Category",
+
+    successMessage: "Category deleted successfully.",
 
     message: `Delete "${category.name}"?${warning}`,
 

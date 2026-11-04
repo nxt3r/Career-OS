@@ -2013,7 +2013,7 @@ function deleteSkill(skill) {
   confirmDelete({
 
     title: "Delete Skill",
-
+    successMessage: "Skill deleted successfully.",
     message: `This permanently removes "${skill.name}" and all its capabilities, evidence, and history.`,
 
     confirmText: skill.name,
@@ -2595,6 +2595,7 @@ function deleteCapability(
   confirmSimple({
 
     title: "Delete Capability",
+    successMessage: "Capability deleted successfully.",
 
     message: `Delete "${capability.title}"? Any evidence attached to it will also be removed.`,
 
@@ -3299,7 +3300,7 @@ function deleteEvidence(
   confirmSimple({
 
     title: "Delete Evidence",
-
+    successMessage: "Evidence deleted successfully.",
     message: `Delete evidence "${evidence.title}"?`,
 
     onConfirm: () => {

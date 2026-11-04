@@ -234,12 +234,20 @@ These are ideas, not promises:
 
 ---
 
-## License
-
-Career OS is proprietary software. All rights reserved by Nx Conglo. See [LICENSE](LICENSE).
-
----
-
 ## Credits
 
 Created by **NxT3R**. A product of [Nx Conglo](https://nxt3r.github.io/nx-conglo/).
+
+---
+
+
+## License
+
+Copyright © 2026 Nx Conglo. All rights reserved.
+
+This software is licensed under the
+[Nx Conglo Proprietary Software License v1.0](./LICENSE)
+
+Personal, non-commercial use of officially released binaries is permitted.
+Source-code reuse, redistribution, modification, and commercial use require
+prior written permission, except where applicable third-party licenses provide otherwise.

@@ -119,11 +119,97 @@ export function showModalError(errorElement, message) {
 }
 
 
+/*
+ * SUCCESS MODAL
+ *
+ * Small "done" confirmation. Closes itself after a
+ * couple of seconds, or immediately with the OK button.
+ * Call it only AFTER the action has fully finished —
+ * opening it replaces any modal that is currently open.
+ */
+
+export function showSuccess(message, { duration = 2500 } = {}) {
+
+  const overlay = openModal(`
+
+    <div class="success-modal">
+
+      <div class="success-icon">✓</div>
+
+      <h3>Done</h3>
+
+      <p>${escapeModalHTML(message)}</p>
+
+      <div class="modal-actions">
+        <button class="modal-save" id="successOkBtn">OK</button>
+      </div>
+
+    </div>
+
+  `);
+
+  const okButton =
+    document.getElementById("successOkBtn");
+
+  okButton.addEventListener("click", closeModal);
+
+  okButton.focus();
+
+  setTimeout(() => {
+
+    /* only close if it's still THIS modal on screen */
+    if (document.getElementById("modalOverlay") === overlay) {
+
+      closeModal();
+
+    }
+
+  }, duration);
+
+}
+
+
+/*
+ * FLASH MESSAGE
+ *
+ * For actions that reload the page or log the user out:
+ * save a message now, and it shows once on the next screen.
+ */
+
+const FLASH_KEY = "careerOsFlash";
+
+export function setFlash(message) {
+
+  try {
+    sessionStorage.setItem(FLASH_KEY, message);
+  } catch {
+    /* storage blocked — message is just skipped */
+  }
+
+}
+
+export function showFlash() {
+
+  let message = null;
+
+  try {
+    message = sessionStorage.getItem(FLASH_KEY);
+    sessionStorage.removeItem(FLASH_KEY);
+  } catch {
+    return;
+  }
+
+  if (message) showSuccess(message);
+
+}
+
+
 export function confirmDelete({
   title,
   message,
   confirmText,
-  onConfirm
+  onConfirm,
+  successMessage
 }) {
 
   openModal(`
@@ -152,7 +238,7 @@ export function confirmDelete({
 
   document
     .getElementById("deleteConfirmSave")
-    .addEventListener("click", () => {
+    .addEventListener("click", async () => {
 
       const input =
         document.getElementById("deleteConfirmInput").value;
@@ -170,7 +256,9 @@ export function confirmDelete({
 
       closeModal();
 
-      onConfirm();
+      await onConfirm();
+
+      if (successMessage) showSuccess(successMessage);
 
     });
 
@@ -210,7 +298,7 @@ export function closeModal() {
 
 }
 
-export function confirmSimple({ title, message, onConfirm }) {
+export function confirmSimple({ title, message, onConfirm, successMessage }) {
 
   openModal(`
 
@@ -236,7 +324,7 @@ export function confirmSimple({ title, message, onConfirm }) {
     .addEventListener("click", closeModal);
 
   document.getElementById("simpleConfirmSave")
-    .addEventListener("click", () => {
+    .addEventListener("click", async () => {
 
       const input = document.getElementById("simpleConfirmInput").value.trim();
       const errorBox = document.getElementById("simpleConfirmError");
@@ -249,7 +337,10 @@ export function confirmSimple({ title, message, onConfirm }) {
       }
 
       closeModal();
-      onConfirm();
+
+      await onConfirm();
+
+      if (successMessage) showSuccess(successMessage);
 
     });
 

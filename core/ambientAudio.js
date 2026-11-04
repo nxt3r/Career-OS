@@ -42,6 +42,8 @@ export async function setAmbientCategory(category) {
   currentManifest =
     await loadManifest(category);
 
+  if (currentCategory !== category) return;
+
   if (currentManifest.length === 0) {
 
     console.warn(
@@ -112,6 +114,16 @@ function playRandomTrack() {
     console.warn("Ambient audio play blocked:", error);
 
   });
+
+}
+
+
+export function stopAmbient() {
+
+  currentCategory = "silence";
+
+  audioElement.pause();
+  audioElement.currentTime = 0;
 
 }
 

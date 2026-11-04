@@ -17,3 +17,6 @@ admin/
 desktop.ini
 
 # Audio files (Publish independently on HUB before final publish)
+
+# Firestore rules
+firestore.rules

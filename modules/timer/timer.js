@@ -1,6 +1,6 @@
 import { state } from "../../core/state.js";
 import { saveData } from "../../core/storage.js";
-import { pauseAmbient, resumeAmbient } from "../../core/ambientAudio.js";
+import { pauseAmbient, resumeAmbient, stopAmbient } from "../../core/ambientAudio.js";
 import { getDisplayStatus } from "../skills/skills.js";
 import { renderLinkChip, attachLinkChipEvents } from "../../core/linkChip.js";
 import { publishMyRanking } from "../../core/rankings.js";
@@ -391,6 +391,8 @@ export function renderTimer(app) {
     };
 
     state.sessions.unshift(session);
+
+    stopAmbient();
 
     state.activeTimer = null;
 

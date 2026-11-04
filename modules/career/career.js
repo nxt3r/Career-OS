@@ -1320,6 +1320,8 @@ function deleteGoal(goal) {
 
     title: "Delete Career Goal",
 
+    successMessage: "Career goal deleted successfully.",
+
     message: `This permanently removes "${goal.title}" and its roadmap.`,
 
     confirmText: goal.title,

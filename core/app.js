@@ -8,6 +8,8 @@ import { renderUsernameScreen } from "../modules/auth/username.js";
 import { getUserProfile } from "./username.js";
 import { initState, clearState } from "./state.js";
 import { setCurrentUid } from "./storage.js";
+import { stopAmbient } from "./ambientAudio.js";
+import { showFlash } from "./modal.js";
 
 console.log("App booted");
 
@@ -54,6 +56,17 @@ onAuthChange(async user => {
   if (!user) {
 
     clearState();
+
+    /* logged out: stop music and leave Focus Mode.
+       (The timer itself stays saved on the account.) */
+    stopAmbient();
+
+    import("../modules/focus/focusMode.js")
+      .then(({ exitFocusMode }) => exitFocusMode())
+      .catch(() => {});
+
+    /* runs after the login screen is drawn below */
+    setTimeout(showFlash, 0);
 
     setCurrentUid(null);
 
@@ -237,5 +250,7 @@ onAuthChange(async user => {
   }
 
   loadRoute();
+
+  showFlash();
 
 });

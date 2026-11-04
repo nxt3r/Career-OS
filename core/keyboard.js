@@ -112,6 +112,10 @@ if (
       break;
 
     case "7":
+      goTo("rankings");
+      break;
+
+    case "8":
       goTo("settings");
       break;
 

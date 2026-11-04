@@ -1,25 +1,52 @@
-Career OS
-Copyright (c) 2026 Nx Conglo. All rights reserved.
+Nx Conglo Proprietary Software License v1.0
 
-This software and its associated files (the "Software") are proprietary to
-Nx Conglo.
+Copyright © 2026 Nx Conglo. All rights reserved.
 
-No permission is granted to use, copy, modify, merge, publish, distribute,
-sublicense, or sell copies of the Software, or to create derivative works
-from it, without the prior written permission of Nx Conglo.
+1. Ownership
 
-Hosting this repository publicly on GitHub does not grant any license beyond
-the rights that GitHub's Terms of Service give other GitHub users, namely
-viewing the repository and forking it on GitHub.
+The original source code, software architecture, original documentation, graphics, logos, branding, and other materials in this repository are owned by Nx Conglo or their respective credited rights holders, unless otherwise stated.
 
-Third-party components used by the Software, such as the Firebase SDK, remain
-the property of their respective owners and are subject to their own licenses.
+2. Permitted Use
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL
-NX CONGLO BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN
-ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
-WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+You are permitted to:
 
-Contact: https://nxt3r.github.io/nx-conglo/
+- View and inspect the public repository.
+- Download and run officially released binaries for personal, non-commercial use.
+- Interact with the software through its intended functionality.
+- Refer to the software by its name for identification, discussion, or review.
+
+These permissions do not transfer ownership or grant permission to reuse the underlying source code or original assets in another project.
+
+3. Restrictions
+
+Without prior written permission from the applicable rights holder, you may not:
+
+- Claim authorship or ownership of the covered source code, software, or original assets.
+- Copy, republish, or redistribute the source code or substantial portions of it.
+- Modify, adapt, or distribute modified versions of the covered software.
+- Incorporate the covered source code or original assets into another project, product, or service.
+- Sell, sublicense, or commercially exploit the covered software or its original assets.
+- Rebrand the software, remove copyright notices, or present the software or its original work as your own.
+- Use Nx Conglo's name, logos, or branding in a way that implies ownership, affiliation, or endorsement.
+
+4. Third-Party Components
+
+This license applies only to materials that Nx Conglo has the right to license.
+
+Third-party libraries, dependencies, code, fonts, assets, and other components remain subject to their respective licenses and terms. Where a third-party license grants rights that differ from this license, the applicable third-party license governs those components.
+
+5. No Warranty
+
+The software and its materials are provided "as is", without warranties of any kind, to the maximum extent permitted by applicable law.
+
+6. Reservation of Rights
+
+All rights not expressly granted under this license are reserved by Nx Conglo or the applicable rights holder.
+
+7. Permissions
+
+Requests for permission to reuse, modify, redistribute, or commercially exploit covered materials must be directed to the applicable rights holder and authorized in writing before such use.
+
+8. Applicable Law
+
+This license is subject to applicable law. Nothing in this license excludes rights or protections that cannot lawfully be excluded.

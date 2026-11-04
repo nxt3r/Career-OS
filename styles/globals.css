@@ -1658,3 +1658,33 @@ button:focus-visible{
   outline-offset:4px;
   border-radius:6px;
 }
+
+/* SUCCESS MODAL */
+
+.success-modal{
+  text-align:center;
+  padding:8px 4px;
+}
+
+.success-icon{
+  width:56px;
+  height:56px;
+  margin:0 auto 12px;
+  border-radius:50%;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-size:28px;
+  color:var(--success, #22C55E);
+  background:color-mix(in srgb, var(--success, #22C55E) 20%, transparent);
+  animation:successPop 0.3s ease;
+}
+
+.success-modal .modal-actions{
+  justify-content:center;
+}
+
+@keyframes successPop{
+  from{ transform:scale(0.5); opacity:0; }
+  to{ transform:scale(1); opacity:1; }
+}

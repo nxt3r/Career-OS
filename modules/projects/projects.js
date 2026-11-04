@@ -470,7 +470,7 @@ function renderList() {
                               class="edit-project"
                               data-project="${project.id}"
                             >
-                              Rename Project
+                              Edit Project
                             </button>
 
 
@@ -720,7 +720,7 @@ return `
   <div class="project-tab-panel">
 
     <p>
-      ${project.description || "No description."}
+      ${project.description ? escapeHTML(project.description) : "No description."}
     </p>
 
 
@@ -870,118 +870,105 @@ function attachProjectManagementEvents() {
 
 
   /*
-   * RENAME PROJECT
+   * EDIT PROJECT (name + description)
    */
 
   document
     .querySelectorAll(".edit-project")
     .forEach(button => {
 
-      button.addEventListener(
-        "click",
-        event => {
+      button.addEventListener("click", event => {
 
-          /*
-           * Prevent the click from
-           * affecting the project card.
-           */
+        event.stopPropagation();
 
-          event.stopPropagation();
+        const project =
+          state.projects.find(
+            p => p.id === button.dataset.project
+          );
 
+        if (!project) return;
 
-          const project =
-            state.projects.find(
-              project =>
-                project.id ===
-                button.dataset.project
-            );
+        /* Archived projects are always read-only. */
+        if (project.archived) return;
 
+        openModal(`
 
-          if (!project) return;
+          <h3>Edit Project</h3>
 
+          <div id="renameProjectError" class="auth-error"></div>
 
-          /*
-           * Archived projects are
-           * always read-only.
-           */
+          <div class="modal-field">
+            <label>Name</label>
+            <input type="text" id="renameProjectInput">
+          </div>
 
-          if (project.archived) {
+          <div class="modal-field">
+            <label>Description (optional)</label>
+            <input type="text" id="renameProjectDescription">
+          </div>
 
-            return;
+          <div class="modal-actions">
+            <button class="modal-save" id="renameProjectSave">Save</button>
+            <button class="modal-cancel" id="renameProjectCancel">Cancel</button>
+          </div>
 
-          }
+        `);
 
+        /* Set values in JS so quotes in names can't break the HTML */
+        document.getElementById("renameProjectInput").value =
+          project.name;
 
-          openModal(`
+        document.getElementById("renameProjectDescription").value =
+          project.description || "";
 
-            <h3>Rename Project</h3>
+        document
+          .getElementById("renameProjectCancel")
+          .addEventListener("click", closeModal);
 
-            <div id="renameProjectError" class="auth-error"></div>
+        document
+          .getElementById("renameProjectSave")
+          .addEventListener("click", () => {
 
-            <div class="modal-field">
-              <label>Name</label>
-              <input type="text" id="renameProjectInput" value="${project.name}">
-            </div>
+            const errorBox =
+              document.getElementById("renameProjectError");
 
-            <div class="modal-actions">
-              <button class="modal-save" id="renameProjectSave">Save</button>
-              <button class="modal-cancel" id="renameProjectCancel">Cancel</button>
-            </div>
+            const trimmedNewName =
+              document.getElementById("renameProjectInput").value.trim();
 
-          `);
+            const newDescription =
+              document.getElementById("renameProjectDescription").value.trim();
 
-          document
-            .getElementById("renameProjectCancel")
-            .addEventListener("click", closeModal);
+            if (!trimmedNewName) {
+              showModalError(errorBox, "Project name cannot be empty.");
+              return;
+            }
 
-          document
-            .getElementById("renameProjectSave")
-            .addEventListener("click", () => {
-
-              const errorBox =
-                document.getElementById("renameProjectError");
-
-              const trimmedNewName =
-                document.getElementById("renameProjectInput").value.trim();
-
-              if (!trimmedNewName) {
-
-                showModalError(errorBox, "Project name cannot be empty.");
-
-                return;
-
-              }
-
-              const nameExists =
-                state.projects.some(
-                  existingProject =>
-                    existingProject.id !== project.id &&
-                    existingProject.name.toLowerCase() ===
-                    trimmedNewName.toLowerCase()
-                );
-
-              if (nameExists) {
-
-                showModalError(errorBox, "A project with this name already exists.");
-
-                return;
-
-              }
-
-              project.name = trimmedNewName;
-
-              saveData(state);
-
-              closeModal();
-
-              renderProjects(
-                document.getElementById("app")
+            const nameExists =
+              state.projects.some(
+                existing =>
+                  existing.id !== project.id &&
+                  existing.name.toLowerCase() === trimmedNewName.toLowerCase()
               );
 
-            });
+            if (nameExists) {
+              showModalError(errorBox, "A project with this name already exists.");
+              return;
+            }
 
-        }
-      );
+            project.name = trimmedNewName;
+            project.description = newDescription;
+
+            saveData(state);
+
+            closeModal();
+
+            renderProjects(
+              document.getElementById("app")
+            );
+
+          });
+
+      });
 
     });
 
@@ -1800,6 +1787,7 @@ function attachMilestoneManagementEvents() {
 
 confirmSimple({
   title: "Delete Milestone",
+  successMessage: "Milestone deleted successfully.",
   message: `Delete "${milestone.title}"?`,
   onConfirm: () => {
 

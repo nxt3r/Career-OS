@@ -1,9 +1,11 @@
 import { state } from "../../core/state.js";
 import { saveData } from "../../core/storage.js";
+import { publishMyRanking } from "../../core/rankings.js";
 import { formatTime } from "../timer/timer.js";
 import {
   setAmbientCategory,
   pauseAmbient,
+  stopAmbient,
   resumeAmbient,
   setAmbientVolume,
   getCurrentCategory,
@@ -437,6 +439,12 @@ function attachEvents(active) {
       });
 
       state.activeTimer = null;
+
+      stopAmbient();
+
+      publishMyRanking(state).catch(error =>
+        console.error("Ranking publish error:", error)
+      );
 
       saveData(state);
       syncTimerPage();
