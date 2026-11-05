@@ -70,6 +70,7 @@ const projects = Object.entries(projectMap)
     );
 
     return {
+      id,
       name: project?.name || "Unknown",
       time
     };

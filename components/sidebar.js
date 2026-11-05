@@ -1,111 +1,47 @@
 import { goTo } from "../core/router.js";
 
+const NAV_ITEMS = [
+  { page: "dashboard", id: "navDashboard", icon: "📊", label: "Dashboard" },
+  { page: "timer",     id: "navTimer",     icon: "⏱️", label: "Time OS" },
+  { page: "projects",  id: "navProjects",  icon: "📁", label: "Projects" },
+  { page: "skills",    id: "navSkills",    icon: "🧩", label: "Skills" },
+  { page: "career",    id: "navCareer",    icon: "🧭", label: "Career" },
+  { page: "reviews",   id: "navReviews",   icon: "📈", label: "Reviews" },
+  { page: "rankings",  id: "navRankings",  icon: "🏆", label: "Rankings" },
+  { page: "settings",  id: "navSettings",  icon: "⚙️", label: "Settings" }
+];
+
 export function createSidebar() {
 
   const sidebar =
     document.getElementById("sidebar");
 
   sidebar.innerHTML = `
-    <h1><a class="sidebar-brand" href="#dashboard">Career OS</a></h1>
+    <h1>
+      <a class="sidebar-brand" href="#dashboard">
+        <span class="brand-mark">C</span>
+        <span class="brand-text">Career <span class="brand-os">OS</span></span>
+      </a>
+    </h1>
 
-    <button id="navDashboard" data-page="dashboard">
-      Dashboard
-    </button>
-
-    <button id="navTimer" data-page="timer">
-      Time OS
-    </button>
-
-    <button id="navProjects" data-page="projects">
-      Projects
-    </button>
-
-    <button id="navSkills" data-page="skills">
-      Skills
-    </button>
-
-    <button id="navCareer" data-page="career">
-      Career
-    </button>
-
-    <button id="navReviews" data-page="reviews">
-      Reviews
-    </button>
-
-    <button id="navRankings" data-page="rankings">
-      Rankings
-    </button>
-
-    <button id="navSettings" data-page="settings">
-      Settings
-    </button>
+    ${NAV_ITEMS.map((item, index) => `
+      <button id="${item.id}" data-page="${item.page}">
+        <span class="nav-icon">${item.icon}</span>
+        <span class="nav-label">${item.label}</span>
+        <span class="nav-key">${index + 1}</span>
+      </button>
+    `).join("")}
   `;
 
   highlightActiveNav();
 
-
-  document
-    .getElementById("navDashboard")
-    .addEventListener(
-      "click",
-      () => goTo("dashboard")
-    );
-
-
-  document
-    .getElementById("navTimer")
-    .addEventListener(
-      "click",
-      () => goTo("timer")
-    );
-
-
-  document
-    .getElementById("navProjects")
-    .addEventListener(
-      "click",
-      () => goTo("projects")
-    );
-
+  NAV_ITEMS.forEach(item => {
 
     document
-    .getElementById("navSkills")
-    .addEventListener(
-      "click",
-      () => goTo("skills")
-    );
+      .getElementById(item.id)
+      .addEventListener("click", () => goTo(item.page));
 
-
-    document
-    .getElementById("navCareer")
-    .addEventListener(
-      "click",
-      () => goTo("career")
-    );
-
-
-    document
-    .getElementById("navReviews")
-    .addEventListener(
-      "click",
-      () => goTo("reviews")
-    );
-
-
-  document
-    .getElementById("navRankings")
-    .addEventListener(
-      "click",
-      () => goTo("rankings")
-    );
-
-
-  document
-    .getElementById("navSettings")
-    .addEventListener(
-      "click",
-      () => goTo("settings")
-    );
+  });
 
 }
 

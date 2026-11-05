@@ -2,6 +2,7 @@ import { state } from "../../core/state.js";
 import { saveData } from "../../core/storage.js";
 import { openModal, closeModal, showModalError, confirmDelete, confirmSimple } from "../../core/modal.js";
 import { replayFadeIn } from "../../core/utils.js";
+import { celebrateLevelUp } from "../../core/celebrate.js";
 import { renderLinkChip, attachLinkChipEvents } from "../../core/linkChip.js";
 
 let openedSkill = null;
@@ -1975,6 +1976,14 @@ function promoteSkill(skill) {
   /*
    * RECORD HISTORY
    */
+
+  celebrateLevelUp({
+    skillName: skill.name,
+    fromName: getLevelName(fromLevel),
+    toName: getLevelName(toLevel),
+    toLevel,
+    mastered: toLevel >= skill.targetLevel || toLevel >= 5
+  });
 
   skill.levelHistory.push({
 

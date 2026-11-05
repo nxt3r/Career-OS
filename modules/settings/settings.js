@@ -53,10 +53,10 @@ export async function renderSettings(app) {
 
         <div class="setting-row">
           <div>
-            <p class="setting-row-label">App Tour</p>
-            <p class="setting-row-value">A quick walkthrough of Career OS</p>
+            <p class="setting-row-title">Replay the app tour</p>
+            <p class="setting-row-hint">See what each page does, step by step.</p>
           </div>
-          <button id="replayTourBtn" class="btn-compact">Replay</button>
+          <button id="replayTourBtn" class="btn-compact">▶ Replay</button>
         </div>
 
       </div>

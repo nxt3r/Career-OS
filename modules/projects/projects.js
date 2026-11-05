@@ -3,6 +3,7 @@ import { saveData } from "../../core/storage.js";
 import { openModal, closeModal, showModalError, confirmDelete, confirmSimple } from "../../core/modal.js";
 import { replayFadeIn } from "../../core/utils.js";
 import { renderLinkChip, attachLinkChipEvents } from "../../core/linkChip.js";
+import { launchConfetti } from "../../core/celebrate.js";
 
 let openedProject = null;
 let projectFilter = "All";
@@ -1310,7 +1311,18 @@ function attachMilestoneEvents() {
           if (!milestone) return;
 
 
-                    milestone.done =
+                    if (box.checked) {
+
+            const everythingElseDone =
+              project.milestones.every(
+                other => other.id === milestone.id || other.done
+              );
+
+            launchConfetti({ count: everythingElseDone ? 130 : 40 });
+
+          }
+
+          milestone.done =
             box.checked;
 
            milestone.completedAt =

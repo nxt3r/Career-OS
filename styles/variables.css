@@ -1,10 +1,10 @@
 :root{
 
   /* BASE */
-  --bg: #0A0B0C;
-  --surface: #202327;
-  --surface-2: #32373C;
-  --surface-3: #16181A;
+  --bg: #070910;
+  --surface: #131821;
+  --surface-2: #222a37;
+  --surface-3: #0d1118;
 
   /* PREMIUM SURFACE TREATMENT */
   --surface-sheen: rgba(255, 255, 255, 0.04);
@@ -30,6 +30,8 @@
   --accent-career: #F59E0B;
   --accent-reviews: #6366F1;
   --accent-settings: #64748B;
+  --accent-rankings: #EC4899;
+  --accent-account: #F97316;
 
   /* ACTIVE ACCENT — set per page via body[data-module] below */
   --accent: var(--accent-dashboard);
@@ -46,3 +48,22 @@ body[data-module="skills"]{ --accent: var(--accent-skills); }
 body[data-module="career"]{ --accent: var(--accent-career); }
 body[data-module="reviews"]{ --accent: var(--accent-reviews); }
 body[data-module="settings"]{ --accent: var(--accent-settings); }
+body[data-module="rankings"]{ --accent: var(--accent-rankings); }
+
+/* profile corner pages (account, help, support chat, static pages) share one accent */
+body[data-module="account"],
+body[data-module="profile"],
+body[data-module="help"],
+body[data-module="chat"],
+body[data-module="support"],
+body[data-module="faq"],
+body[data-module="privacy"],
+body[data-module="license"],
+body[data-module="bug"]{
+  --accent: var(--accent-account);
+}
+
+/* the profile corner itself, on every page */
+.profile-corner{
+  --accent: var(--accent-account);
+}

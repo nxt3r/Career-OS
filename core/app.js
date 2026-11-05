@@ -9,6 +9,7 @@ import { getUserProfile } from "./username.js";
 import { initState, clearState } from "./state.js";
 import { setCurrentUid } from "./storage.js";
 import { stopAmbient } from "./ambientAudio.js";
+import { initMotion } from "./motion.js";
 import { showFlash } from "./modal.js";
 
 console.log("App booted");
@@ -241,6 +242,8 @@ onAuthChange(async user => {
     listenersAttached = true;
 
     initKeyboard();
+
+    initMotion();
 
     window.addEventListener(
       "hashchange",
