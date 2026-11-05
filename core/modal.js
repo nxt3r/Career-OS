@@ -128,7 +128,7 @@ export function showModalError(errorElement, message) {
  * opening it replaces any modal that is currently open.
  */
 
-export function showSuccess(message, { duration = 2500 } = {}) {
+export function showSuccess(message, { duration = 60000 } = {}) {
 
   const overlay = openModal(`
 
@@ -199,7 +199,11 @@ export function showFlash() {
     return;
   }
 
-  if (message) showSuccess(message);
+  if (!message) return false;
+
+  showSuccess(message);
+
+  return true;
 
 }
 

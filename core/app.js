@@ -251,6 +251,15 @@ onAuthChange(async user => {
 
   loadRoute();
 
-  showFlash();
+  /* a pending message (e.g. "data reset") takes priority;
+     otherwise new/empty accounts get the tour */
+  if (!showFlash()) {
+
+    const { shouldShowOnboarding, startOnboarding } =
+      await import("../modules/onboarding/onboarding.js");
+
+    if (shouldShowOnboarding()) startOnboarding();
+
+  }
 
 });

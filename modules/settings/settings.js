@@ -49,6 +49,20 @@ export async function renderSettings(app) {
 
       <div class="card">
 
+        <h3>Getting Started</h3>
+
+        <div class="setting-row">
+          <div>
+            <p class="setting-row-label">App Tour</p>
+            <p class="setting-row-value">A quick walkthrough of Career OS</p>
+          </div>
+          <button id="replayTourBtn" class="btn-compact">Replay</button>
+        </div>
+
+      </div>
+
+      <div class="card">
+
         <h3>Goals</h3>
 
         <div class="setting-row">
@@ -613,6 +627,16 @@ async function resetData() {
    ========================================================= */
 
 function attachSettingsEvents() {
+
+  document.getElementById("replayTourBtn")
+    .addEventListener("click", async () => {
+
+      const { startOnboarding } =
+        await import("../onboarding/onboarding.js");
+
+      startOnboarding({ replay: true });
+
+    });
 
   document.getElementById("deleteAccountBtn")
     .addEventListener("click", showDeleteAccountConfirm);
