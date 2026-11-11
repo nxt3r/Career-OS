@@ -12,7 +12,7 @@ const PRIVACY_SECTIONS = [
   {
     icon: "🏢",
     title: "Who we are",
-    html: `Career OS is a product of ${NX_LINK}`
+    html: `Career OS is a product of Nx Conglo. It is owned, operated and maintained by Nx Conglo. For more information, visit Nx Conglo's website at ${NX_LINK}`
   },
 
   {
@@ -94,7 +94,7 @@ const FAQ_GROUPS = ["Basics", "Tracking", "Growth", "Account", "Support"];
 
 const FAQS = [
 
-  { group: "Basics", q: "What is Career OS and who manages it?", a: `Career OS, created by NxT3R, is a subsidiary of ${NX_LOGO_ONLY} that tracks all your time and connects Projects, Skills, and Career Goals with each other. Nx Conglo manages the platform and provides support while also adding new features from time to time.` },
+  { group: "Basics", q: "What is Career OS and who manages it?", a: `Career OS is a subsidiary of Nx Conglo that tracks all your time and connects Projects, Skills, and Career Goals with each other. Nx Conglo manages the platform and provides support while also adding new features from time to time.` },
 
   { group: "Tracking", q: "How do I track my time?", a: "Go to Time OS, pick a category, optionally link a project or skill, and press Start." },
 
@@ -277,11 +277,11 @@ export function renderLicense(app) {
 
         <p>Career OS is a personal productivity application.</p>
 
-        <p>A product of ${NX_LINK}</p>
-
         <div class="license-divider"></div>
 
         <p class="license-rights">All rights reserved by Nx Conglo.</p>
+        
+        <p>${NX_LINK}</p>
 
         <p class="copyright">© Nx Conglo ${year}</p>
 
